@@ -1,0 +1,71 @@
+name: Refresh README download links
+
+on:
+  release:
+    types: [published, edited, unpublished, deleted]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: readme-download-links
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v8
+        with:
+          script: |
+            const repo = context.repo;
+            const { data: repository } = await github.rest.repos.get(repo);
+            const branch = repository.default_branch;
+            let release;
+            try {
+              ({ data: release } = await github.rest.repos.getLatestRelease(repo));
+            } catch (error) {
+              if (error.status !== 404) throw error;
+            }
+
+            const platforms = [
+              ["Windows x64", [["MSI", /_x64_.*\.msi$/i], ["EXE", /_x64-setup\.exe$/i]]],
+              ["macOS Apple Silicon", [["DMG", /_(aarch64|arm64)\.dmg$/i]]],
+              ["macOS Intel", [["DMG", /_(x64|x86_64)\.dmg$/i]]],
+              ["Linux x86-64", [["AppImage", /_(amd64|x86_64)\.appimage$/i], ["DEB", /_(amd64|x86_64)\.deb$/i], ["RPM", /[._]x86_64\.rpm$/i]]],
+            ];
+            const rows = platforms.flatMap(([platform, installers]) => {
+              const links = installers.flatMap(([label, pattern]) => {
+                const asset = release?.assets.find(asset =>
+                  asset.state === "uploaded" && asset.size > 0 && pattern.test(asset.name)
+                );
+                return asset ? [`[${label}](${asset.browser_download_url})`] : [];
+              });
+              return links.length ? [`| ${platform} | ${links.join(" · ")} |`] : [];
+            });
+            const start = "<!-- download-links:start -->";
+            const end = "<!-- download-links:end -->";
+            const releasesUrl = `${repository.html_url}/releases`;
+            const summary = release
+              ? `Latest release: [${release.tag_name}](${releasesUrl}/latest)`
+              : `See [Releases](${releasesUrl}) for installer availability.`;
+            const section = [start, summary, ...(rows.length
+              ? ["", "| Platform | Installer |", "| --- | --- |", ...rows]
+              : []), end].join("\n");
+
+            const path = "README.md";
+            const { data: file } = await github.rest.repos.getContent({ ...repo, path, ref: branch });
+            const current = Buffer.from(file.content, "base64").toString("utf8");
+            const block = /<!-- download-links:start -->[\s\S]*?<!-- download-links:end -->/;
+            if (!block.test(current)) throw new Error("Missing README download section markers");
+            const updated = current.replace(block, () => section);
+            if (updated === current) return;
+            await github.rest.repos.createOrUpdateFileContents({
+              ...repo,
+              path,
+              branch,
+              sha: file.sha,
+              message: "Refresh README installer links",
+              content: Buffer.from(updated).toString("base64"),
+            });
