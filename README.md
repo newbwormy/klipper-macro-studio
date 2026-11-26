@@ -4,9 +4,11 @@ Cross-platform desktop application (Windows, Linux, macOS) to visually build Kli
 
 ## Browser demo
 
+[Open the live browser demo](https://newbwormy.github.io/klipper-macro-studio/)
+
 Try the visual builder, download a `.cfg` file, and play the bundled prime-and-wipe simulation. Playback uses the sample G-code. The desktop app evaluates edited macros and connects to Moonraker.
 
-To preview locally, run `npm ci` and `npm run dev`, then open the URL printed by Vite. To publish the [browser demo](https://newbwormy.github.io/klipper-macro-studio/), set **Settings → Pages → Source** to **GitHub Actions**, then run **Deploy browser demo** from the Actions tab.
+To preview locally, run `npm ci` and `npm run dev`, then open the URL printed by Vite. To publish the demo, set **Settings → Pages → Source** to **GitHub Actions**, then run **Deploy browser demo** from the Actions tab.
 
 ---
 
