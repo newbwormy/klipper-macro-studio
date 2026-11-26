@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { isTauri } from "@tauri-apps/api/core";
 import { MacroDocument } from "./builder/blockTypes";
 import { compileKlipperConfig, compileMacroBody } from "./builder/compiler";
 import { buildMockPrinterState } from "./config/buildMockPrinter";
@@ -10,6 +11,9 @@ import { ExportToolbar } from "./components/ExportToolbar";
 import { MacroBuilder } from "./components/MacroBuilder";
 import { PrinterConfigPanel } from "./components/PrinterConfigPanel";
 import { PrinterViewport } from "./components/PrinterViewport";
+import sampleGcode from "./demo/prime-and-wipe.gcode?raw";
+
+const browserDemo = !isTauri();
 
 const DEFAULT_PROFILE: PrinterProfile = {
   name: "256mm CoreXY",
@@ -98,6 +102,11 @@ export default function App() {
   );
 
   useEffect(() => {
+    if (browserDemo) {
+      setRenderedGcode(sampleGcode);
+      setSimResult(simulateGcode(sampleGcode, DEFAULT_PROFILE, DEFAULT_INITIAL));
+      return;
+    }
     const timer = setTimeout(async () => {
       const body = compileMacroBody(macroDoc);
       try {
@@ -157,14 +166,14 @@ export default function App() {
             onChange={(e) => setMacroDoc({ ...macroDoc, name: e.target.value.toUpperCase().replace(/\s+/g, "_") })}
             style={{ width: 200, fontFamily: "monospace" }}
           />
-          <label style={{ fontSize: 12, color: "#94a3b8" }}>
+          {!browserDemo && <label style={{ fontSize: 12, color: "#94a3b8" }}>
             <input
               type="checkbox"
               checked={kalicoMode}
               onChange={(e) => setKalicoMode(e.target.checked)}
             />{" "}
             Kalico Jinja2 Extensions
-          </label>
+          </label>}
         </div>
         <ExportToolbar doc={macroDoc} />
       </header>
@@ -173,7 +182,13 @@ export default function App() {
       <div style={{ display: "grid", gridTemplateColumns: "290px 1fr 480px", overflow: "hidden" }}>
         {/* Left: Printer Config & State */}
         <aside style={{ borderRight: "1px solid #1e293b", background: "#020617", overflow: "hidden" }}>
-          <PrinterConfigPanel
+          {browserDemo ? (
+            <div style={{ padding: 12, fontSize: 13 }}>
+              <strong>Browser demo</strong>
+              <p>{DEFAULT_PROFILE.name} · Prime and wipe</p>
+              <p>Press Play to simulate the bundled sample. Builder edits update the exported macro. Use the desktop app to simulate your edits or connect to Moonraker.</p>
+            </div>
+          ) : <PrinterConfigPanel
             profile={profile}
             initialState={initialState}
             testParams={testParams}
@@ -185,7 +200,7 @@ export default function App() {
               setImportedMacros(parsed.macros);
             }}
             onMoonrakerSynced={(settings) => setConfigSettings(settings)}
-          />
+          />}
         </aside>
 
         {/* Center: Visual Builder / Live Code */}
@@ -218,7 +233,9 @@ export default function App() {
                 </pre>
               </div>
               <div style={{ display: "flex", flexDirection: "column", overflow: "hidden" }}>
-                <strong style={{ fontSize: 12, marginBottom: 6 }}>Evaluated G-code (Real Jinja2 Output)</strong>
+                <strong style={{ fontSize: 12, marginBottom: 6 }}>
+                  {browserDemo ? "Bundled Sample G-code" : "Evaluated G-code (Real Jinja2 Output)"}
+                </strong>
                 <pre style={{ flex: 1, margin: 0, padding: 10, background: "#0f172a", overflow: "auto", fontSize: 12, color: "#93c5fd" }}>
                   {evalError ? `ERROR: ${evalError}` : renderedGcode}
                 </pre>
@@ -262,6 +279,7 @@ export default function App() {
 
           {/* Playback Controls */}
           <div style={{ padding: 10, background: "#0f172a", borderTop: "1px solid #1e293b", display: "flex", flexDirection: "column", gap: 8 }}>
+            {browserDemo && <strong style={{ fontSize: 12 }}>Sample playback</strong>}
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <button
                 type="button"
