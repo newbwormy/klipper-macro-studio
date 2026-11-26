@@ -109,14 +109,14 @@ function PrinterScene({
       })}
 
       {visibleSegments.map((s) => {
-        if (s.type !== "travel" && s.type !== "extrude" && s.type !== "home") return null;
-        const color = s.type === "extrude" ? "#f97316" : s.type === "home" ? "#22c55e" : "#38bdf8";
+        if (s.type !== "travel" && s.type !== "extrude" && s.type !== "home" && s.type !== "probe") return null;
+        const color = s.type === "probe" ? "#c084fc" : s.type === "extrude" ? "#f97316" : s.type === "home" ? "#22c55e" : "#38bdf8";
         return (
           <Line
             key={s.id}
             points={[toThree(s.from), toThree(s.to)]}
             color={color}
-            lineWidth={s.type === "extrude" ? 2.5 : 1.2}
+            lineWidth={s.type === "extrude" || s.type === "probe" ? 2.5 : 1.2}
             dashed={s.type === "travel"}
             dashSize={3}
             gapSize={2}

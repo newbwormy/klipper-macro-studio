@@ -32,7 +32,7 @@ export interface SimInitialState {
   absoluteExtrude: boolean;
 }
 
-export type SegmentType = "travel" | "extrude" | "retract" | "home" | "wait" | "temp" | "info";
+export type SegmentType = "travel" | "extrude" | "retract" | "home" | "wait" | "temp" | "info" | "probe";
 
 export interface SimSegment {
   id: number;

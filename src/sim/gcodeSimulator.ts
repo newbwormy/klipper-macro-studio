@@ -1,5 +1,6 @@
 import { PrinterProfile, SimInitialState, SimIssue, SimSegment, SimulationResult, Vec3 } from "./types";
 import { PROBE_COMMAND_NAMES } from "../builder/probeCommands";
+import { buildProbePath } from "./probePath";
 
 interface SavedState {
   absolutePos: boolean;
@@ -31,7 +32,8 @@ function parseStandardWords(tokens: string[]): Record<string, number> {
 export function simulateGcode(
   renderedGcode: string,
   profile: PrinterProfile,
-  initial: SimInitialState
+  initial: SimInitialState,
+  settings: Record<string, Record<string, unknown>> = {}
 ): SimulationResult {
   const segments: SimSegment[] = [];
   const issues: SimIssue[] = [];
@@ -286,12 +288,24 @@ export function simulateGcode(
     }
 
     if (PROBE_COMMAND_NAMES.has(cmd)) {
+      const message = `${cmd}: approximate preview. Probe readings and calibration effects require printer hardware.`;
+      if (cmd === "QUERY_PROBE" || cmd === "CARTOGRAPHER_QUERY") {
+        pushSegment(lineNumber, clean, "info", pos, pos, 0.05, 0, "Probe status requires printer hardware.");
+        continue;
+      }
       issues.push({
         lineNumber,
         gcode: clean,
         severity: "warning",
-        message: `${cmd} requires printer hardware. The preview skips its movement, measurements, and calibration effects.`,
+        message,
       });
+      for (const target of buildProbePath(cmd, parseKlipperParams(rest), profile, pos, settings)) {
+        const distance = Math.hypot(target.x - pos.x, target.y - pos.y, target.z - pos.z);
+        if (distance < 0.001) continue;
+        const vertical = target.z !== pos.z;
+        pushSegment(lineNumber, clean, "probe", pos, target, distance / (vertical ? 10 : 100), 0, message);
+        pos = { ...pos, ...target };
+      }
       continue;
     }
 

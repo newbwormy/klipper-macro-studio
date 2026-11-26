@@ -340,7 +340,7 @@ function BlockList({
                   style={{ fontFamily: "monospace" }}
                 />
               </label>
-              <span style={{ color: "#94a3b8" }}>Probe motion and calibration require the configured printer.</span>
+              <span style={{ color: "#94a3b8" }}>Preview motion is approximate. Probe readings and calibration require the configured printer.</span>
             </div>
           )}
 

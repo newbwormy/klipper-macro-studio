@@ -101,12 +101,23 @@ export default function App() {
     [profile, initialState, configSettings, importedMacros]
   );
 
+  const browserProbeGcode = useMemo(() => {
+    if (!browserDemo) return "";
+    const blocks = macroDoc.blocks.filter((block) => block.type === "probe");
+    return compileMacroBody({ ...macroDoc, blocks, params: [] });
+  }, [macroDoc]);
+
   useEffect(() => {
-    if (browserDemo) {
-      setRenderedGcode(sampleGcode);
-      setSimResult(simulateGcode(sampleGcode, DEFAULT_PROFILE, DEFAULT_INITIAL));
-      return;
-    }
+    if (!browserDemo) return;
+    const gcode = browserProbeGcode || sampleGcode;
+    setRenderedGcode(gcode);
+    setSimResult(simulateGcode(gcode, DEFAULT_PROFILE, DEFAULT_INITIAL));
+    setIsPlaying(false);
+    setCurrentTime(0);
+  }, [browserProbeGcode]);
+
+  useEffect(() => {
+    if (browserDemo) return;
     const timer = setTimeout(async () => {
       const body = compileMacroBody(macroDoc);
       try {
@@ -114,7 +125,7 @@ export default function App() {
         if (res.ok && res.gcode !== undefined) {
           setRenderedGcode(res.gcode);
           setEvalError(null);
-          const sim = simulateGcode(res.gcode, profile, initialState);
+          const sim = simulateGcode(res.gcode, profile, initialState, configSettings);
           setSimResult(sim);
           setCurrentTime(0);
         } else {
@@ -126,7 +137,7 @@ export default function App() {
     }, 180);
 
     return () => clearTimeout(timer);
-  }, [macroDoc, mockPrinter, testParams, kalicoMode, profile, initialState]);
+  }, [macroDoc, mockPrinter, testParams, kalicoMode, profile, initialState, configSettings]);
 
   const handleTimeAdvance = (delta: number) => {
     setCurrentTime((prev) => {
@@ -186,7 +197,8 @@ export default function App() {
             <div style={{ padding: 12, fontSize: 13 }}>
               <strong>Browser demo</strong>
               <p>{DEFAULT_PROFILE.name} · Prime and wipe</p>
-              <p>Press Play to simulate the bundled sample. Builder edits update the exported macro. Use the desktop app to simulate your edits or connect to Moonraker.</p>
+              <p>Add a top-level Probe block and press Play to preview its movement. With no Probe blocks, playback uses the prime-and-wipe sample.</p>
+              <p>Use the desktop app to evaluate Jinja2, preview the full macro, or connect to Moonraker.</p>
             </div>
           ) : <PrinterConfigPanel
             profile={profile}
@@ -234,7 +246,7 @@ export default function App() {
               </div>
               <div style={{ display: "flex", flexDirection: "column", overflow: "hidden" }}>
                 <strong style={{ fontSize: 12, marginBottom: 6 }}>
-                  {browserDemo ? "Bundled Sample G-code" : "Evaluated G-code (Real Jinja2 Output)"}
+                  {browserDemo ? (browserProbeGcode ? "Probe Preview G-code" : "Bundled Sample G-code") : "Evaluated G-code (Real Jinja2 Output)"}
                 </strong>
                 <pre style={{ flex: 1, margin: 0, padding: 10, background: "#0f172a", overflow: "auto", fontSize: 12, color: "#93c5fd" }}>
                   {evalError ? `ERROR: ${evalError}` : renderedGcode}
@@ -279,7 +291,7 @@ export default function App() {
 
           {/* Playback Controls */}
           <div style={{ padding: 10, background: "#0f172a", borderTop: "1px solid #1e293b", display: "flex", flexDirection: "column", gap: 8 }}>
-            {browserDemo && <strong style={{ fontSize: 12 }}>Sample playback</strong>}
+            {browserDemo && <strong style={{ fontSize: 12 }}>{browserProbeGcode ? "Approximate probe playback" : "Sample playback"}</strong>}
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <button
                 type="button"
