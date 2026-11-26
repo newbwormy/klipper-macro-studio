@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { isTauri } from "@tauri-apps/api/core";
 import { MacroDocument } from "./builder/blockTypes";
-import { compileBrowserProbePreview, compileKlipperConfig, compileMacroBody } from "./builder/compiler";
+import { compileBrowserPreview, compileKlipperConfig, compileMacroBody } from "./builder/compiler";
 import { buildMockPrinterState } from "./config/buildMockPrinter";
 import { ParsedMacroEntry } from "./config/klipperCfgParser";
 import { evaluateKlipperMacro } from "./lib/macroApi";
@@ -101,25 +101,36 @@ export default function App() {
     [profile, initialState, configSettings, importedMacros]
   );
 
-  const browserProbeGcode = useMemo(() => {
-    return browserDemo ? compileBrowserProbePreview(macroDoc) : "";
+  const browserGcode = useMemo(() => {
+    if (!browserDemo) return "";
+    return macroDoc.language !== "python" && macroDoc.blocks === DEFAULT_MACRO.blocks
+      ? sampleGcode : compileBrowserPreview(macroDoc);
   }, [macroDoc]);
 
   useEffect(() => {
     if (!browserDemo) return;
-    const gcode = browserProbeGcode || sampleGcode;
-    setRenderedGcode(gcode);
-    setSimResult(simulateGcode(gcode, DEFAULT_PROFILE, DEFAULT_INITIAL));
+    setRenderedGcode(browserGcode);
+    setSimResult(simulateGcode(browserGcode, DEFAULT_PROFILE, DEFAULT_INITIAL));
     setIsPlaying(false);
     setCurrentTime(0);
-  }, [browserProbeGcode]);
+  }, [browserGcode]);
 
   useEffect(() => {
     if (browserDemo) return;
+    if (macroDoc.language === "python") {
+      setRenderedGcode("");
+      setEvalError(null);
+      setSimResult({ segments: [], issues: [], totalDuration: 0 });
+      setIsPlaying(false);
+      setCurrentTime(0);
+      return;
+    }
+    let cancelled = false;
     const timer = setTimeout(async () => {
       const body = compileMacroBody(macroDoc);
       try {
         const res = await evaluateKlipperMacro(body, mockPrinter, testParams, kalicoMode);
+        if (cancelled) return;
         if (res.ok && res.gcode !== undefined) {
           setRenderedGcode(res.gcode);
           setEvalError(null);
@@ -130,11 +141,14 @@ export default function App() {
           setEvalError(res.error ?? "Jinja2 evaluation failed");
         }
       } catch (err) {
-        setEvalError(String(err));
+        if (!cancelled) setEvalError(String(err));
       }
     }, 180);
 
-    return () => clearTimeout(timer);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
   }, [macroDoc, mockPrinter, testParams, kalicoMode, profile, initialState, configSettings]);
 
   const handleTimeAdvance = (delta: number) => {
@@ -195,7 +209,7 @@ export default function App() {
             <div style={{ padding: 12, fontSize: 13 }}>
               <strong>Browser demo</strong>
               <p>{DEFAULT_PROFILE.name} · Prime and wipe</p>
-              <p>Add a top-level Probe block and press Play to preview it alongside other literal G-code. With no probe commands, playback uses the prime-and-wipe sample.</p>
+              <p>Press Play for the bundled sample, or edit the macro to preview its literal G-code.</p>
               <p>Use the desktop app to evaluate Jinja2 or connect to Moonraker.</p>
             </div>
           ) : <PrinterConfigPanel
@@ -233,7 +247,7 @@ export default function App() {
           </div>
 
           {centerTab === "builder" ? (
-            <MacroBuilder doc={macroDoc} onChange={setMacroDoc} />
+            <MacroBuilder doc={macroDoc} onChange={setMacroDoc} importedCommands={importedMacros.map(({ name }) => name)} />
           ) : (
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, padding: 12, overflow: "hidden" }}>
               <div style={{ display: "flex", flexDirection: "column", overflow: "hidden" }}>
@@ -244,10 +258,11 @@ export default function App() {
               </div>
               <div style={{ display: "flex", flexDirection: "column", overflow: "hidden" }}>
                 <strong style={{ fontSize: 12, marginBottom: 6 }}>
-                  {browserDemo ? (browserProbeGcode ? "Probe Preview G-code" : "Bundled Sample G-code") : "Evaluated G-code (Real Jinja2 Output)"}
+                  {browserDemo ? (browserGcode === sampleGcode ? "Bundled Sample G-code" : "Preview G-code") : "Evaluated G-code (Real Jinja2 Output)"}
                 </strong>
                 <pre style={{ flex: 1, margin: 0, padding: 10, background: "#0f172a", overflow: "auto", fontSize: 12, color: "#93c5fd" }}>
-                  {evalError ? `ERROR: ${evalError}` : renderedGcode}
+                  {macroDoc.language === "python" ? "Kalico runs Python macros on the printer. This editor exports the source."
+                    : evalError ? `ERROR: ${evalError}` : renderedGcode}
                 </pre>
               </div>
             </div>
@@ -290,10 +305,13 @@ export default function App() {
 
           {/* Playback Controls */}
           <div style={{ padding: 10, background: "#0f172a", borderTop: "1px solid #1e293b", display: "flex", flexDirection: "column", gap: 8 }}>
-            {browserDemo && <strong style={{ fontSize: 12 }}>{browserProbeGcode ? "Approximate probe playback" : "Sample playback"}</strong>}
+            {browserDemo && macroDoc.language !== "python" && <strong style={{ fontSize: 12 }}>
+              {browserGcode === sampleGcode ? "Sample playback" : "Literal G-code playback"}
+            </strong>}
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <button
                 type="button"
+                disabled={simResult.totalDuration <= 0}
                 onClick={() => {
                   if (currentTime >= simResult.totalDuration) setCurrentTime(0);
                   setIsPlaying((p) => !p);

@@ -52,6 +52,12 @@ def evaluate_macro(payload: dict) -> dict:
         "action_emergency_stop": action_emergency_stop,
         "action_call_remote_method": action_call_remote_method,
     }
+    if kalico_mode:
+        def action_log(msg):
+            logs.append({"level": "info", "message": str(msg)})
+            return ""
+
+        context["action_log"] = action_log
 
     template = env.from_string(macro_gcode)
     rendered = template.render(context)

@@ -1,5 +1,4 @@
 import { MacroBlock, MacroDocument } from "./blockTypes";
-import { PROBE_COMMAND_NAMES } from "./probeCommands";
 
 const NUMBER_RE = /^-?\d+(\.\d+)?$/;
 
@@ -94,6 +93,9 @@ function compileBlocks(blocks: MacroBlock[], indent = ""): string[] {
 }
 
 export function compileMacroBody(doc: MacroDocument): string {
+  if (doc.language === "python") {
+    return (doc.python ?? "").split(/\r?\n/).map(line => line.trim() ? `!${line}` : "").join("\n");
+  }
   const paramLines = doc.params.map((p) => {
     const key = p.name.toUpperCase();
     const filter = p.type === "string" ? "" : `|${p.type}`;
@@ -105,14 +107,13 @@ export function compileMacroBody(doc: MacroDocument): string {
   return [...paramLines, ...(paramLines.length ? [""] : []), ...bodyLines].join("\n");
 }
 
-export function compileBrowserProbePreview(doc: MacroDocument): string {
+export function compileBrowserPreview(doc: MacroDocument): string {
+  if (doc.language === "python") return "";
   const lines = doc.blocks.flatMap((block) => {
     const compiled = compileBlocks([block]);
     return compiled.some((line) => /[{}]/.test(line)) ? [] : compiled;
   });
-  return lines.some((line) => PROBE_COMMAND_NAMES.has(line.trim().split(/[\s;#]+/)[0].toUpperCase()))
-    ? lines.join("\n")
-    : "";
+  return lines.join("\n");
 }
 
 export function compileKlipperConfig(doc: MacroDocument): string {

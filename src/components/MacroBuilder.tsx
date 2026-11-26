@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { MacroBlock, MacroDocument } from "../builder/blockTypes";
 import { getAvailableVariables, VariableChip } from "../builder/printerVariables";
 import { PROBE_COMMANDS, type ProbeCommand } from "../builder/probeCommands";
+import { CommandLibrary } from "./CommandLibrary";
 
 const makeId = () => crypto.randomUUID().slice(0, 8);
 
@@ -361,10 +362,13 @@ function BlockList({
 export function MacroBuilder({
   doc,
   onChange,
+  importedCommands,
 }: {
   doc: MacroDocument;
   onChange: (next: MacroDocument) => void;
+  importedCommands: string[];
 }) {
+  const python = doc.language === "python";
   const vars = getAvailableVariables(doc);
   const addBlock = (key: keyof typeof BLOCK_TEMPLATES) =>
     onChange({ ...doc, blocks: [...doc.blocks, BLOCK_TEMPLATES[key]()] });
@@ -382,8 +386,24 @@ export function MacroBuilder({
           overflowY: "auto",
         }}
       >
-        <div style={{ fontSize: 11, fontWeight: 700, color: "#94a3b8" }}>ADD BLOCK</div>
-        {Object.keys(BLOCK_TEMPLATES).map((key) => (
+        <label style={{ display: "grid", gap: 4, fontSize: 12 }}>
+          Macro language
+          <select value={doc.language ?? "jinja"}
+            onChange={(e) => onChange({ ...doc, language: e.target.value === "python" ? "python" : "jinja" })}>
+            <option value="jinja">G-code / Jinja2</option>
+            <option value="python">Kalico Python</option>
+          </select>
+        </label>
+        <CommandLibrary python={python} imported={importedCommands} onInsert={(code) => {
+          if (python) {
+            const body = doc.python?.trimEnd();
+            onChange({ ...doc, python: body ? `${body}\n${code}` : code });
+          } else {
+            onChange({ ...doc, blocks: [...doc.blocks, { id: makeId(), type: "raw_gcode", code }] });
+          }
+        }} />
+        {!python && <div style={{ fontSize: 11, fontWeight: 700, color: "#94a3b8" }}>ADD BLOCK</div>}
+        {!python && Object.keys(BLOCK_TEMPLATES).map((key) => (
           <button
             key={key}
             type="button"
@@ -396,11 +416,18 @@ export function MacroBuilder({
       </div>
 
       <div style={{ padding: 12, overflowY: "auto" }}>
-        <BlockList
+        {python ? (
+          <label style={{ display: "grid", gap: 8 }}>
+            Kalico Python macro
+            <textarea value={doc.python ?? ""} onChange={(e) => onChange({ ...doc, python: e.target.value })}
+              rows={18} spellCheck={false} style={{ fontFamily: "monospace" }} />
+            <small>Use the command library to insert helpers. Export adds Kalico’s Python line prefixes.</small>
+          </label>
+        ) : <BlockList
           blocks={doc.blocks}
           onChange={(blocks) => onChange({ ...doc, blocks })}
           vars={vars}
-        />
+        />}
       </div>
     </div>
   );

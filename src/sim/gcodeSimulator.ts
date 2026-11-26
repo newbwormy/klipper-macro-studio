@@ -1,11 +1,13 @@
 import { PrinterProfile, SimInitialState, SimIssue, SimSegment, SimulationResult, Vec3 } from "./types";
 import { PROBE_COMMAND_NAMES } from "../builder/probeCommands";
 import { buildProbePath } from "./probePath";
+import { catalogCommandNames } from "../builder/commandCatalog";
 
 interface SavedState {
   absolutePos: boolean;
   absoluteExtrude: boolean;
   feedrate: number;
+  speedFactor: number;
   position: { x: number; y: number; z: number; e: number };
 }
 
@@ -44,6 +46,8 @@ export function simulateGcode(
   let absolutePos = initial.absolutePos;
   let absoluteExtrude = initial.absoluteExtrude;
   let feedrate = initial.feedrate || 3000;
+  let speedFactor = 1;
+  let maxVelocity = profile.maxVelocity;
   let bedTemp = initial.bedTemp;
   let bedTarget = initial.bedTemp;
   let toolTemp = initial.toolTemp;
@@ -99,6 +103,24 @@ export function simulateGcode(
     if (cmd === "G91") { absolutePos = false; continue; }
     if (cmd === "M82") { absoluteExtrude = true; continue; }
     if (cmd === "M83") { absoluteExtrude = false; continue; }
+    if (cmd === "RETURN") break;
+
+    if (cmd === "M112") {
+      issues.push({ lineNumber, gcode: clean, severity: "error", message: "Emergency stop ends the simulation here." });
+      break;
+    }
+
+    if (cmd === "M220") {
+      const { S } = parseStandardWords(tokens.slice(1));
+      if (Number.isFinite(S) && S > 0) speedFactor = S / 100;
+      continue;
+    }
+
+    if (cmd === "SET_VELOCITY_LIMIT" || cmd === "RESET_VELOCITY_LIMIT") {
+      const velocity = cmd === "RESET_VELOCITY_LIMIT" ? profile.maxVelocity : Number(parseKlipperParams(rest).VELOCITY);
+      if (Number.isFinite(velocity) && velocity > 0) maxVelocity = velocity;
+      continue;
+    }
 
     if (cmd === "G92") {
       const w = parseStandardWords(tokens.slice(1));
@@ -178,7 +200,7 @@ export function simulateGcode(
       }
 
       const dist = Math.hypot(next.x - from.x, next.y - from.y, next.z - from.z);
-      const speedMmS = Math.min(feedrate / 60, profile.maxVelocity);
+      const speedMmS = Math.min(feedrate * speedFactor / 60, maxVelocity);
       const moveDist = dist > 0 ? dist : Math.abs(eDelta);
       const duration = speedMmS > 0 ? moveDist / speedMmS : 0.05;
 
@@ -245,6 +267,54 @@ export function simulateGcode(
     }
     if (cmd === "M107") { fanSpeed = 0; continue; }
 
+    if (cmd === "SET_FAN_SPEED") {
+      const speed = Number(parseKlipperParams(rest).SPEED);
+      if (Number.isFinite(speed)) fanSpeed = Math.min(1, Math.max(0, speed));
+      continue;
+    }
+
+    if (cmd === "TURN_OFF_HEATERS" || cmd === "SET_HEATER_TEMPERATURE") {
+      const { HEATER, TARGET } = parseKlipperParams(rest);
+      const target = Number(TARGET ?? 0);
+      if (cmd === "TURN_OFF_HEATERS") {
+        bedTarget = toolTarget = 0;
+      } else if (Number.isFinite(target) && (HEATER === "extruder" || HEATER === "heater_bed")) {
+        if (HEATER === "extruder") toolTarget = target;
+        else bedTarget = target;
+      } else {
+        issues.push({ lineNumber, gcode: clean, severity: "warning", message: "Only valid hotend and bed heater targets are previewed." });
+        continue;
+      }
+      pushSegment(lineNumber, clean, "temp", pos, pos, 0.05, 0,
+        cmd === "TURN_OFF_HEATERS" ? "Heater targets set to zero." : `Set ${HEATER} target to ${target}°C.`);
+      continue;
+    }
+
+    if (cmd === "TEMPERATURE_WAIT") {
+      const { SENSOR, MINIMUM, MAXIMUM } = parseKlipperParams(rest);
+      const minimum = MINIMUM === undefined ? -Infinity : Number(MINIMUM);
+      const maximum = MAXIMUM === undefined ? Infinity : Number(MAXIMUM);
+      const bed = SENSOR === "heater_bed";
+      const current = bed ? bedTemp : toolTemp;
+      const target = bed ? bedTarget : toolTarget;
+      const next = current >= minimum && current <= maximum ? current : target;
+      if ((bed || SENSOR === "extruder") && next >= minimum && next <= maximum) {
+        if (bed) bedTemp = next;
+        else toolTemp = next;
+        pushSegment(lineNumber, clean, "wait", pos, pos, next === current ? 0.05 : 0.8, 0,
+          `Approximate wait for ${SENSOR} at ${next}°C.`);
+      } else {
+        issues.push({ lineNumber, gcode: clean, severity: "warning",
+          message: "The current sensor or heater target cannot satisfy this wait in the preview." });
+      }
+      continue;
+    }
+
+    if (cmd === "M400") {
+      pushSegment(lineNumber, clean, "wait", pos, pos, 0.05, 0, "Wait for queued moves.");
+      continue;
+    }
+
     if (cmd === "SAVE_GCODE_STATE") {
       const p = parseKlipperParams(rest);
       const name = p.NAME || "default";
@@ -252,6 +322,7 @@ export function simulateGcode(
         absolutePos,
         absoluteExtrude,
         feedrate,
+        speedFactor,
         position: { ...pos },
       });
       continue;
@@ -273,6 +344,7 @@ export function simulateGcode(
       absolutePos = saved.absolutePos;
       absoluteExtrude = saved.absoluteExtrude;
       feedrate = saved.feedrate;
+      speedFactor = saved.speedFactor;
 
       if (p.MOVE === "1") {
         const from = { x: pos.x, y: pos.y, z: pos.z };
@@ -327,11 +399,15 @@ export function simulateGcode(
       continue;
     }
 
-    if (cmd === "RESPOND") {
-      const p = parseKlipperParams(rest);
+    if (cmd === "RESPOND" || cmd === "M117" || cmd === "M118") {
+      const message = cmd === "RESPOND" ? parseKlipperParams(rest).MSG || rest : rest;
       const pt = { x: pos.x, y: pos.y, z: pos.z };
-      pushSegment(lineNumber, clean, "info", pt, pt, 0.05, 0, p.MSG || rest);
+      pushSegment(lineNumber, clean, "info", pt, pt, 0.05, 0, message);
       continue;
+    }
+    if (catalogCommandNames.has(cmd)) {
+      issues.push({ lineNumber, gcode: clean, severity: "warning",
+        message: `${cmd} is exported but its effects are not simulated.` });
     }
   }
 

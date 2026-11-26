@@ -47,4 +47,6 @@ export interface MacroDocument {
   description: string;
   params: MacroParamDef[];
   blocks: MacroBlock[];
+  language?: "jinja" | "python";
+  python?: string;
 }

@@ -19,7 +19,7 @@ Latest release: [v0.1.1](https://github.com/newbwormy/klipper-macro-studio/relea
 
 [Open the live browser demo](https://newbwormy.github.io/klipper-macro-studio/)
 
-Try the visual builder, download a `.cfg` file, and play the bundled prime-and-wipe simulation. Playback uses the sample G-code. The desktop app evaluates edited macros and connects to Moonraker.
+Try the visual builder, download a `.cfg` file, and play the bundled prime-and-wipe simulation. Editing the macro switches browser playback to its literal G-code. The desktop app evaluates Jinja2 and connects to Moonraker.
 
 To preview locally, run `npm ci` and `npm run dev`, then open the URL printed by Vite. To publish the demo, set **Settings → Pages → Source** to **GitHub Actions**, then run **Deploy browser demo** from the Actions tab.
 
@@ -39,7 +39,15 @@ To preview locally, run `npm ci` and `npm run dev`, then open the URL printed by
 
 Add a **Probe** block in the visual builder and choose a Klipper or Cartographer command. The block exports the command with any optional G-code parameters you enter. Klipper options include probe status, accuracy, calibration, bed meshing, Z tilt, and gantry leveling. Cartographer options cover status, scan, and touch commands for the current plugin with a `[cartographer]` section.
 
-Probe motion appears in purple in the 3D viewport. The desktop preview uses configured mesh and leveling points when available. In the browser demo, adding a top-level Probe block previews it and the other literal G-code in order. Cartographer touch homing uses a simulated flat-bed reading and marks Z homed after X and Y are homed so subsequent moves can play. Desktop Jinja2 sees an initial mock probe status when it renders a macro. A reading taken during playback becomes available to subsequent simulated probe queries, since Klipper renders a macro before executing its commands. See the [Klipper G-code reference](https://www.klipper3d.org/G-Codes.html) and [Cartographer macro reference](https://docs.cartographer3d.com/cartographer-probe/reference/macros-reference/).
+Probe motion appears in purple in the 3D viewport. The desktop preview uses configured mesh and leveling points when available. In the browser demo, a top-level Probe block plays with the other literal G-code in order. Cartographer touch homing uses a simulated flat-bed reading and marks Z homed after X and Y are homed so subsequent moves can play. Desktop Jinja2 sees an initial mock probe status when it renders a macro. A reading taken during playback becomes available to subsequent simulated probe queries, since Klipper renders a macro before executing its commands. See the [Klipper G-code reference](https://www.klipper3d.org/G-Codes.html) and [Cartographer macro reference](https://docs.cartographer3d.com/cartographer-probe/reference/macros-reference/).
+
+## Command library and macro helpers
+
+Open **Command library** in the builder and search by command or module. The library lists commands from the [Klipper](https://www.klipper3d.org/G-Codes.html) and [Kalico](https://docs.kalico.gg/G-Codes.html) references, plus selected commands from Cartographer, Beacon, KAMP, Shake&Tune, Happy Hare, and AFC. The desktop app also lists macros from imported config files. Availability and parameters depend on the firmware version and printer configuration.
+
+Select **Template helpers** to insert common Jinja2 constructs and actions. For [Kalico Python macros](https://docs.kalico.gg/Command_Templates.html#python), change **Macro language** to **Kalico Python**. The editor inserts Python helpers and exports the required line prefixes. Kalico executes that code on the printer.
+
+The simulator previews supported commands such as motion, probing, speed overrides, heater targets and waits, and fan changes. It reports commands whose effects it cannot model. Firmware configuration, calibration, and plugin behavior still depend on the printer.
 
 ---
 
