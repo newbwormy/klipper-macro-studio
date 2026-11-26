@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { isTauri } from "@tauri-apps/api/core";
 import { MacroDocument } from "./builder/blockTypes";
-import { compileKlipperConfig, compileMacroBody } from "./builder/compiler";
+import { compileBrowserProbePreview, compileKlipperConfig, compileMacroBody } from "./builder/compiler";
 import { buildMockPrinterState } from "./config/buildMockPrinter";
 import { ParsedMacroEntry } from "./config/klipperCfgParser";
 import { evaluateKlipperMacro } from "./lib/macroApi";
@@ -102,9 +102,7 @@ export default function App() {
   );
 
   const browserProbeGcode = useMemo(() => {
-    if (!browserDemo) return "";
-    const blocks = macroDoc.blocks.filter((block) => block.type === "probe");
-    return compileMacroBody({ ...macroDoc, blocks, params: [] });
+    return browserDemo ? compileBrowserProbePreview(macroDoc) : "";
   }, [macroDoc]);
 
   useEffect(() => {
@@ -197,8 +195,8 @@ export default function App() {
             <div style={{ padding: 12, fontSize: 13 }}>
               <strong>Browser demo</strong>
               <p>{DEFAULT_PROFILE.name} · Prime and wipe</p>
-              <p>Add a top-level Probe block and press Play to preview its movement. With no Probe blocks, playback uses the prime-and-wipe sample.</p>
-              <p>Use the desktop app to evaluate Jinja2, preview the full macro, or connect to Moonraker.</p>
+              <p>Add a top-level Probe block and press Play to preview it alongside other literal G-code. With no probe commands, playback uses the prime-and-wipe sample.</p>
+              <p>Use the desktop app to evaluate Jinja2 or connect to Moonraker.</p>
             </div>
           ) : <PrinterConfigPanel
             profile={profile}
@@ -282,6 +280,7 @@ export default function App() {
                 }}
               >
                 <div>Line {activeSeg.lineNumber}: {activeSeg.gcode}</div>
+                {activeSeg.message && <div>{activeSeg.message}</div>}
                 <div style={{ color: "#94a3b8", marginTop: 2 }}>
                   Hotend: {activeSeg.toolTemp}°C | Bed: {activeSeg.bedTemp}°C
                 </div>

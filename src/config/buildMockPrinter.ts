@@ -30,6 +30,12 @@ export function buildMockPrinterState(
       temperature: initial.bedTemp,
       target: initial.bedTemp,
     },
+    probe: {
+      name: configSettings.cartographer ? "cartographer" : "probe",
+      last_query: false,
+      last_z_result: 0,
+      last_probe_position: { x: initial.position.x, y: initial.position.y, z: 0 },
+    },
     configfile: {
       settings: configSettings,
     },

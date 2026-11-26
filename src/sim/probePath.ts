@@ -51,6 +51,10 @@ export function buildProbePath(
         y: start.y + (end.y - start.y) * row / (rows - 1),
       };
     });
+  } else if (command === "CARTOGRAPHER_TOUCH_HOME") {
+    points = [readPoint(settings.bed_mesh?.zero_reference_position) ?? {
+      x: (min.x + max.x) / 2, y: (min.y + max.y) / 2,
+    }];
   } else if (command === "Z_TILT_ADJUST" || command === "QUAD_GANTRY_LEVEL") {
     const configured = section?.points;
     const rows = Array.isArray(configured) ? configured : String(configured ?? "").split("\n");
@@ -60,7 +64,8 @@ export function buildProbePath(
     ];
   }
 
-  const path = [point(position.x, position.y, Math.max(position.z, travelZ))];
+  const lift = command === "CARTOGRAPHER_TOUCH_HOME" ? 2 : 0;
+  const path = [point(position.x, position.y, Math.max(position.z + lift, travelZ))];
   if (scanMesh) {
     const first = points[0];
     const last = points[points.length - 1];

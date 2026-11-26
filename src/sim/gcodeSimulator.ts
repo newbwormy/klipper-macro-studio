@@ -51,6 +51,7 @@ export function simulateGcode(
   let fanSpeed = 0;
   let currentTime = 0;
   let segId = 0;
+  let lastTouchZ: number | undefined;
 
   const pushSegment = (
     lineNumber: number,
@@ -290,21 +291,38 @@ export function simulateGcode(
     if (PROBE_COMMAND_NAMES.has(cmd)) {
       const message = `${cmd}: approximate preview. Probe readings and calibration effects require printer hardware.`;
       if (cmd === "QUERY_PROBE" || cmd === "CARTOGRAPHER_QUERY") {
-        pushSegment(lineNumber, clean, "info", pos, pos, 0.05, 0, "Probe status requires printer hardware.");
+        const status = lastTouchZ === undefined
+          ? "No simulated touch reading yet."
+          : `Last simulated touch: Z${lastTouchZ.toFixed(3)} mm.`;
+        pushSegment(lineNumber, clean, "info", pos, pos, 0.05, 0, status);
+        continue;
+      }
+      const touchHome = cmd === "CARTOGRAPHER_TOUCH_HOME";
+      if (touchHome && (!homed.has("x") || !homed.has("y"))) {
+        issues.push({
+          lineNumber, gcode: clean, severity: "error",
+          message: "Home X and Y before Cartographer touch homing.",
+        });
         continue;
       }
       issues.push({
         lineNumber,
         gcode: clean,
         severity: "warning",
-        message,
+        message: touchHome ? "Cartographer touch home uses a simulated flat-bed reading." : message,
       });
       for (const target of buildProbePath(cmd, parseKlipperParams(rest), profile, pos, settings)) {
         const distance = Math.hypot(target.x - pos.x, target.y - pos.y, target.z - pos.z);
         if (distance < 0.001) continue;
         const vertical = target.z !== pos.z;
-        pushSegment(lineNumber, clean, "probe", pos, target, distance / (vertical ? 10 : 100), 0, message);
+        pushSegment(lineNumber, clean, "probe", pos, target, distance / (vertical ? 10 : 100), 0);
         pos = { ...pos, ...target };
+      }
+      if (touchHome) {
+        lastTouchZ = Math.min(profile.axisMax.z, Math.max(0, profile.axisMin.z));
+        homed.add("z");
+        pushSegment(lineNumber, clean, "info", pos, pos, 0.25, 0,
+          `Simulated touch at Z${lastTouchZ.toFixed(3)} mm. Z is homed.`);
       }
       continue;
     }

@@ -1,4 +1,5 @@
 import { MacroBlock, MacroDocument } from "./blockTypes";
+import { PROBE_COMMAND_NAMES } from "./probeCommands";
 
 const NUMBER_RE = /^-?\d+(\.\d+)?$/;
 
@@ -102,6 +103,16 @@ export function compileMacroBody(doc: MacroDocument): string {
 
   const bodyLines = compileBlocks(doc.blocks);
   return [...paramLines, ...(paramLines.length ? [""] : []), ...bodyLines].join("\n");
+}
+
+export function compileBrowserProbePreview(doc: MacroDocument): string {
+  const lines = doc.blocks.flatMap((block) => {
+    const compiled = compileBlocks([block]);
+    return compiled.some((line) => /[{}]/.test(line)) ? [] : compiled;
+  });
+  return lines.some((line) => PROBE_COMMAND_NAMES.has(line.trim().split(/[\s;#]+/)[0].toUpperCase()))
+    ? lines.join("\n")
+    : "";
 }
 
 export function compileKlipperConfig(doc: MacroDocument): string {
