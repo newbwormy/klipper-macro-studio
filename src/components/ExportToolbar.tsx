@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { isTauri } from "@tauri-apps/api/core";
 import { save } from "@tauri-apps/plugin-dialog";
 import { writeTextFile } from "@tauri-apps/plugin-fs";
 import { MacroDocument } from "../builder/blockTypes";
@@ -17,6 +18,16 @@ export function ExportToolbar({ doc }: { doc: MacroDocument }) {
   const handleSaveCfg = async () => {
     const cfgText = compileKlipperConfig(doc);
     const defaultName = `${doc.name.toLowerCase() || "custom_macro"}.cfg`;
+
+    if (!isTauri()) {
+      const url = URL.createObjectURL(new Blob([cfgText], { type: "text/plain" }));
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = defaultName;
+      link.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      return;
+    }
 
     const filePath = await save({
       defaultPath: defaultName,
