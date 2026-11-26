@@ -10,6 +10,18 @@ To preview locally, run `npm ci` and `npm run dev`, then open the URL printed by
 
 ---
 
+## Screenshots
+
+**Visual builder and 3D sample playback**
+
+![Klipper Macro Studio visual builder showing the prime-and-wipe blocks and the simulated toolpath](docs/screenshots/visual-builder.jpg)
+
+**Generated macro and bundled G-code**
+
+![Compiled Klipper macro and bundled G-code shown side by side during sample playback](docs/screenshots/generated-macro.jpg)
+
+---
+
 ## Compiling on Linux
 
 ### 1. Prerequisites
