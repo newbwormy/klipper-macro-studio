@@ -1,0 +1,9 @@
+node_modules/
+dist/
+src-tauri/target/
+src-tauri/binaries/macro-engine-*
+sidecar/build/
+sidecar/dist/
+sidecar/__pycache__/
+*.spec
+.venv/
