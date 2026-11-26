@@ -92,18 +92,7 @@ Compiled installers are output to:
 3. **Python 3.10+:** `brew install python` (or [python.org](https://www.python.org/))
 4. **Rust:** `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh`
 
-### 2. Quick Build (Using Included Scripts)
-```bash
-chmod +x dev-macos.sh build-macos.sh
-
-# Run in dev mode:
-./dev-macos.sh
-
-# Or build .app and .dmg installers:
-./build-macos.sh
-```
-
-### 3. Manual Build Steps
+### 2. Build the Python sidecar and desktop app
 ```bash
 ARCH="$(uname -m)"
 if [ "$ARCH" = "arm64" ]; then
@@ -121,7 +110,12 @@ python3 -m venv .venv
   sidecar/macro_engine.py
 chmod +x "src-tauri/binaries/macro-engine-${TARGET}"
 
-npm install
+npm ci
+
+# Run in development mode:
+npm run tauri dev -- --target "$TARGET"
+
+# Or build .app and .dmg installers:
 npm run tauri build -- --target "$TARGET"
 ```
 Compiled artifacts are output to:

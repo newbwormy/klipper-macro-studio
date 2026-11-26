@@ -12,16 +12,22 @@ foreach ($cmd in @("node", "npm", "cargo", "python")) {
 Write-Host "[1/3] Building Python Jinja2 sidecar..." -ForegroundColor Yellow
 if (-not (Test-Path ".venv")) {
     python -m venv .venv
+    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 }
 & .\.venv\Scripts\python.exe -m pip install --upgrade pip
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 & .\.venv\Scripts\pip.exe install -r sidecar\requirements.txt
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 & .\.venv\Scripts\pyinstaller.exe --onefile --name macro-engine-x86_64-pc-windows-msvc --distpath src-tauri\binaries sidecar\macro_engine.py
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 Write-Host "[2/3] Installing Node dependencies..." -ForegroundColor Yellow
-npm install
+npm ci
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 Write-Host "[3/3] Building Windows Tauri installer (.msi / .exe)..." -ForegroundColor Yellow
 npm run tauri build
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 Write-Host ""
 Write-Host "Build complete! Installers are in:" -ForegroundColor Green
