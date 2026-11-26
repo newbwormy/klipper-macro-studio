@@ -131,7 +131,3 @@ powershell -ExecutionPolicy Bypass -File .\build-windows.ps1
 Installers are output to `src-tauri\target\release\bundle\msi\` and `src-tauri\target\release\bundle\nsis\`.
 
 ---
-
-## Automated Cross-Platform Builds (GitHub Actions)
-
-Push a version tag (e.g., `git tag v0.1.0 && git push origin v0.1.0`) or trigger **Release Cross-Platform Builds** manually from the GitHub **Actions** tab to compile Windows, Linux, and macOS (Apple Silicon & Intel) installers automatically.
