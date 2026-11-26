@@ -75,6 +75,11 @@ function compileBlocks(blocks: MacroBlock[], indent = ""): string[] {
         lines.push(`${indent}{% endif %}`);
         break;
       }
+      case "probe": {
+        const parameters = b.parameters.trim();
+        lines.push(parameters ? `${indent}${b.command} ${parameters}` : `${indent}${b.command}`);
+        break;
+      }
       case "raw_gcode": {
         for (const rawLine of b.code.split(/\r?\n/)) {
           lines.push(`${indent}${rawLine}`);

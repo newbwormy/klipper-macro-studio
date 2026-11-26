@@ -1,3 +1,5 @@
+import type { ProbeCommand } from "./probeCommands";
+
 export type ExprValue = string;
 
 export interface MacroParamDef {
@@ -37,6 +39,7 @@ export type MacroBlock =
       thenBlocks: MacroBlock[];
       elseBlocks: MacroBlock[];
     }
+  | { id: string; type: "probe"; command: ProbeCommand; parameters: string }
   | { id: string; type: "raw_gcode"; code: string };
 
 export interface MacroDocument {

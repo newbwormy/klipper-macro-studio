@@ -1,4 +1,5 @@
 import { PrinterProfile, SimInitialState, SimIssue, SimSegment, SimulationResult, Vec3 } from "./types";
+import { PROBE_COMMAND_NAMES } from "../builder/probeCommands";
 
 interface SavedState {
   absolutePos: boolean;
@@ -281,6 +282,16 @@ export function simulateGcode(
         pos = { ...saved.position };
         pushSegment(lineNumber, clean, "travel", from, { x: pos.x, y: pos.y, z: pos.z }, dist / speed, 0, `Restore state "${name}"`);
       }
+      continue;
+    }
+
+    if (PROBE_COMMAND_NAMES.has(cmd)) {
+      issues.push({
+        lineNumber,
+        gcode: clean,
+        severity: "warning",
+        message: `${cmd} requires printer hardware. The preview skips its movement, measurements, and calibration effects.`,
+      });
       continue;
     }
 

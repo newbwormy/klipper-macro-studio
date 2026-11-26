@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { MacroBlock, MacroDocument } from "../builder/blockTypes";
 import { getAvailableVariables, VariableChip } from "../builder/printerVariables";
+import { PROBE_COMMANDS, type ProbeCommand } from "../builder/probeCommands";
 
 const makeId = () => crypto.randomUUID().slice(0, 8);
 
@@ -20,6 +21,7 @@ const BLOCK_TEMPLATES: Record<string, () => MacroBlock> = {
     thenBlocks: [{ id: makeId(), type: "home", axes: ["X", "Y", "Z"] }],
     elseBlocks: [],
   }),
+  probe: () => ({ id: makeId(), type: "probe", command: "QUERY_PROBE", parameters: "" }),
   raw_gcode: () => ({ id: makeId(), type: "raw_gcode", code: "M400 ; Wait for moves" }),
 };
 
@@ -304,7 +306,41 @@ function BlockList({
                 >
                   + Add Move to THEN
                 </button>
+                <button
+                  type="button"
+                  onClick={() => updateBlock(idx, { thenBlocks: [...block.thenBlocks, BLOCK_TEMPLATES.probe()] })}
+                  style={{ margin: "6px 0 0 6px", fontSize: 11 }}
+                >
+                  + Add Probe to THEN
+                </button>
               </div>
+            </div>
+          )}
+
+          {block.type === "probe" && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 8, fontSize: 12 }}>
+              <label style={{ display: "grid", gap: 4 }}>
+                Probe command
+                <select
+                  value={block.command}
+                  onChange={(e) => updateBlock(idx, { command: e.target.value as ProbeCommand, parameters: "" })}
+                >
+                  {Object.entries(PROBE_COMMANDS).map(([group, commands]) => (
+                    <optgroup key={group} label={group}>
+                      {commands.map((command) => <option key={command}>{command}</option>)}
+                    </optgroup>
+                  ))}
+                </select>
+              </label>
+              <label style={{ display: "grid", gap: 4 }}>
+                Optional G-code parameters
+                <input
+                  value={block.parameters}
+                  onChange={(e) => updateBlock(idx, { parameters: e.target.value })}
+                  style={{ fontFamily: "monospace" }}
+                />
+              </label>
+              <span style={{ color: "#94a3b8" }}>Probe motion and calibration require the configured printer.</span>
             </div>
           )}
 

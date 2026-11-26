@@ -35,6 +35,12 @@ To preview locally, run `npm ci` and `npm run dev`, then open the URL printed by
 
 ![Compiled Klipper macro and bundled G-code shown side by side during sample playback](docs/screenshots/generated-macro.jpg)
 
+## Probe commands
+
+Add a **Probe** block in the visual builder and choose a Klipper or Cartographer command. The block exports the command with any optional G-code parameters you enter. Klipper options include probe status, accuracy, calibration, bed meshing, Z tilt, and gantry leveling. Cartographer options cover status, scan, and touch commands for the current plugin with a `[cartographer]` section.
+
+The desktop preview reports probe commands as hardware-dependent and skips their effects. Check command availability and parameters for your printer before running exported macros. See the [Klipper G-code reference](https://www.klipper3d.org/G-Codes.html) and [Cartographer macro reference](https://docs.cartographer3d.com/cartographer-probe/reference/macros-reference/).
+
 ---
 
 ## Compiling on Linux
