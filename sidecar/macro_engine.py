@@ -1,3 +1,4 @@
+import ast
 import sys
 import json
 import traceback
@@ -45,7 +46,7 @@ def build_env(enable_extensions: bool = False) -> jinja2.Environment:
 
 def evaluate_macro(payload: dict) -> dict:
     macro_gcode = payload.get("gcode", "")
-    printer_state = payload.get("printer", {})
+    printer_state = dict(payload.get("printer", {}))
     raw_params = payload.get("params", {})
     rawparams_str = payload.get("rawparams", " ".join(
         f"{key}={shlex.quote(str(value))}" for key, value in raw_params.items()
@@ -53,6 +54,18 @@ def evaluate_macro(payload: dict) -> dict:
     kalico_mode = payload.get("kalico_extensions", False)
     macro_name = payload.get("macro_name", "").upper()
     macros = payload.get("macros", {})
+    macro_variables = {}
+    for name, macro in macros.items():
+        variables = dict(macro.get("variables", {}))
+        # Klipper stores variable_* config values as Python literals.
+        for key, raw_value in macro.get("variable_literals", {}).items():
+            try:
+                variables[key] = ast.literal_eval(raw_value.strip())
+            except (ValueError, SyntaxError):
+                continue
+        macro_variables[name] = variables
+        if config_name := macro.get("config_name"):
+            printer_state[config_name] = {**printer_state.get(config_name, {}), **variables}
     native_aliases = {
         macro["rename_existing"].upper(): name
         for name, macro in macros.items()
@@ -104,7 +117,7 @@ def evaluate_macro(payload: dict) -> dict:
         if gcode.lstrip().startswith("!"):
             warnings.append(f"{label} uses Kalico Python or an external include. The preview skipped it.")
             return []
-        variables = macros.get(name, {}).get("variables", {})
+        variables = macro_variables.get(name, {})
         try:
             rendered = env.from_string(gcode).render({
                 **variables,

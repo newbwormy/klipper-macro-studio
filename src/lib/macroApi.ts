@@ -26,8 +26,12 @@ export async function evaluateKlipperMacro(
       kalico_extensions: kalicoExtensions,
       macro_name: macroName,
       macros: Object.fromEntries(importedMacros.map(macro => [macro.name.toUpperCase(), {
+        config_name: `gcode_macro ${macro.name}`,
         gcode: macro.gcode,
         variables: macro.variables,
+        variable_literals: Object.fromEntries(Object.entries(macro.options)
+          .filter(([key]) => key.startsWith("variable_"))
+          .map(([key, value]) => [key.slice("variable_".length), value])),
         rename_existing: macro.options.rename_existing,
       }])),
     },
