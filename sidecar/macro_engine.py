@@ -106,6 +106,19 @@ def evaluate_macro(payload: dict) -> dict:
 
     call_count = 0
 
+    def apply_homing(command, args):
+        if command not in ("G28", "CARTOGRAPHER_TOUCH_HOME"):
+            return
+        toolhead = dict(printer_state.get("toolhead", {}))
+        homed = set(toolhead.get("homed_axes", "").lower())
+        if command == "G28":
+            requested = {word[0].lower() for word in args.split()} & set("xyz")
+            homed.update(requested or "xyz")
+        elif {"x", "y"} <= homed:
+            homed.add("z")
+        toolhead["homed_axes"] = "".join(axis for axis in "xyz" if axis in homed)
+        printer_state["toolhead"] = toolhead
+
     def render(gcode, name, params, rawparams, stack):
         nonlocal call_count
         call_count += 1
@@ -130,14 +143,20 @@ def evaluate_macro(payload: dict) -> dict:
                 raise KlipperMacroError(f"{label} needs the {exc} argument in its macro call.") from exc
             raise
         except (jinja2.TemplateError, KlipperMacroError) as exc:
-            raise KlipperMacroError(f"{label}: {exc}") from exc
+            message = str(exc)
+            if message.casefold().startswith(f"{label}:".casefold()):
+                raise
+            raise KlipperMacroError(f"{label}: {message}") from exc
         output = []
+        # Evaluate the current template first. Called macros see preceding commands.
         for line in rendered.split("\n"):
             tokens = line.partition(";")[0].strip().split(maxsplit=1)
             command = tokens[0].upper() if tokens else ""
             args = tokens[1] if len(tokens) > 1 else ""
             if command in native_aliases:
-                output.append(" ".join(part for part in (native_aliases[command], args) if part))
+                native = native_aliases[command]
+                output.append(" ".join(part for part in (native, args) if part))
+                apply_homing(native, args)
             elif command in macros:
                 try:
                     pairs = (arg.split("=", 1) for arg in shlex.split(args))
@@ -147,6 +166,7 @@ def evaluate_macro(payload: dict) -> dict:
                 output.extend(render(macros[command]["gcode"], command, child_params, args, (*stack, label)))
             else:
                 output.append(line)
+                apply_homing(command, args)
         return output
 
     try:
