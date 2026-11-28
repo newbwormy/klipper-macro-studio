@@ -353,7 +353,8 @@ function BlockList({
 
           {block.type === "raw_gcode" && (
             <textarea
-              rows={2}
+              aria-label="G-code source"
+              rows={Math.min(14, Math.max(3, block.code.split(/\r?\n/).length + 1))}
               value={block.code}
               onChange={(e) => updateBlock(idx, { code: e.target.value })}
               style={{ width: "100%", fontFamily: "monospace" }}

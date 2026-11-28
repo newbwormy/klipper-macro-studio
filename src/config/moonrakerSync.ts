@@ -1,19 +1,28 @@
 import { invoke } from "@tauri-apps/api/core";
 import { PrinterProfile, SimInitialState } from "../sim/types";
+import { readMacroSections, type ParsedMacroEntry } from "./klipperCfgParser";
 
 export interface MoonrakerSyncResult {
   profile: PrinterProfile;
   initialState: SimInitialState;
   configSettings: Record<string, Record<string, unknown>>;
+  macros: ParsedMacroEntry[];
+  source: string;
 }
 
 export async function syncFromMoonraker(
   baseUrl: string,
   existingFixtures = [] as PrinterProfile["fixtures"]
 ): Promise<MoonrakerSyncResult> {
-  let normalized = baseUrl.trim();
-  if (!/^https?:\/\//i.test(normalized)) normalized = `http://${normalized}`;
-  if (!/:\d+(\/|$)/.test(normalized)) normalized = `${normalized}:7125`;
+  const address = baseUrl.trim();
+  const hasScheme = /^[a-z][a-z\d+.-]*:\/\//i.test(address);
+  const url = new URL(hasScheme ? address : `http://${address}`);
+  if (!["http:", "https:"].includes(url.protocol) || url.username || url.password || url.search || url.hash) {
+    throw new Error("Enter a Moonraker HTTP or HTTPS address without credentials, a query, or a fragment.");
+  }
+  const directHttp = url.protocol === "http:" && url.pathname === "/";
+  if ((!hasScheme || directHttp) && !url.port && !/:\d+(?:\/|$)/.test(address)) url.port = "7125";
+  const normalized = url.href.replace(/\/+$/, "");
 
   const raw = await invoke<{ result?: { status?: Record<string, any> } }>(
     "fetch_moonraker_snapshot",
@@ -28,6 +37,10 @@ export async function syncFromMoonraker(
   const bed = status.heater_bed ?? {};
   const gm = status.gcode_move ?? {};
   const settings = status.configfile?.settings ?? {};
+  const macros = new Map(readMacroSections(settings).map(macro => [macro.name.toLowerCase(), macro]));
+  for (const macro of readMacroSections(status.configfile?.config ?? {})) {
+    macros.set(macro.name.toLowerCase(), macro);
+  }
 
   const minArr = th.axis_minimum ?? [0, 0, 0];
   const maxArr = th.axis_maximum ?? [250, 250, 250];
@@ -62,5 +75,5 @@ export async function syncFromMoonraker(
     absoluteExtrude: gm.absolute_extrude ?? true,
   };
 
-  return { profile, initialState, configSettings: settings };
+  return { profile, initialState, configSettings: settings, macros: [...macros.values()], source: normalized };
 }

@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { PrinterProfile, SimInitialState } from "../sim/types";
-import { parseKlipperConfig, ParsedKlipperConfig } from "../config/klipperCfgParser";
-import { syncFromMoonraker } from "../config/moonrakerSync";
+import { parseKlipperConfig, type ParsedKlipperConfig, type ParsedMacroEntry } from "../config/klipperCfgParser";
+import { syncFromMoonraker, type MoonrakerSyncResult } from "../config/moonrakerSync";
 
 interface Props {
   profile: PrinterProfile;
@@ -10,8 +10,10 @@ interface Props {
   onProfileChange: (next: PrinterProfile) => void;
   onInitialStateChange: (next: SimInitialState) => void;
   onTestParamsChange: (next: Record<string, string>) => void;
-  onConfigImported: (parsed: ParsedKlipperConfig) => void;
-  onMoonrakerSynced: (settings: Record<string, Record<string, unknown>>) => void;
+  importedMacros: ParsedMacroEntry[];
+  onOpenMacro: (macro: ParsedMacroEntry | null) => void;
+  onConfigImported: (parsed: ParsedKlipperConfig, source: string) => void;
+  onMoonrakerSynced: (result: MoonrakerSyncResult) => void;
 }
 
 export function PrinterConfigPanel({
@@ -21,6 +23,8 @@ export function PrinterConfigPanel({
   onProfileChange,
   onInitialStateChange,
   onTestParamsChange,
+  importedMacros,
+  onOpenMacro,
   onConfigImported,
   onMoonrakerSynced,
 }: Props) {
@@ -29,26 +33,50 @@ export function PrinterConfigPanel({
   const [newParamVal, setNewParamVal] = useState("");
   const [moonrakerUrl, setMoonrakerUrl] = useState("192.168.1.152:7125");
   const [syncMsg, setSyncMsg] = useState<string | null>(null);
+  const [fileError, setFileError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [selection, setSelection] = useState("");
+  const sortedMacros = [...importedMacros].sort((a, b) => a.name.localeCompare(b.name));
+  const selectedMacro = sortedMacros.find(macro => macro.name === selection);
 
   const handleFiles = async (fileList: FileList | null) => {
-    if (!fileList || fileList.length === 0) return;
-    const contents = await Promise.all(Array.from(fileList).map((f) => f.text()));
-    const parsed = parseKlipperConfig(contents, profile);
-    setMissingIncludes(parsed.includes);
-    onProfileChange(parsed.profile);
-    onConfigImported(parsed);
+    if (!fileList || fileList.length === 0 || busy) return;
+    const files = Array.from(fileList);
+    setBusy(true);
+    setFileError(null);
+    try {
+      const contents = await Promise.all(files.map((file) => file.text()));
+      const parsed = parseKlipperConfig(contents, profile);
+      setMissingIncludes(parsed.includes);
+      setSelection("");
+      setSyncMsg(null);
+      onProfileChange(parsed.profile);
+      onConfigImported(parsed, "files:" + JSON.stringify(files.map(file => file.name).sort()));
+    } catch (err) {
+      setFileError(String(err));
+    } finally {
+      setBusy(false);
+    }
   };
 
   const handleMoonrakerSync = async () => {
+    if (busy || !moonrakerUrl.trim()) return;
+    setBusy(true);
     setSyncMsg("Syncing...");
     try {
       const res = await syncFromMoonraker(moonrakerUrl, profile.fixtures);
       onProfileChange(res.profile);
       onInitialStateChange(res.initialState);
-      onMoonrakerSynced(res.configSettings);
-      setSyncMsg("Synced from Moonraker!");
+      onMoonrakerSynced(res);
+      setSelection("");
+      setMissingIncludes([]);
+      setSyncMsg(res.macros.length
+        ? `Imported ${res.macros.length} ${res.macros.length === 1 ? "macro" : "macros"} from Moonraker.`
+        : "Synced printer settings. Moonraker returned no macro definitions.");
     } catch (err) {
       setSyncMsg(`Error: ${String(err)}`);
+    } finally {
+      setBusy(false);
     }
   };
 
@@ -85,15 +113,27 @@ export function PrinterConfigPanel({
         <strong>Sync Live from Moonraker</strong>
         <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
           <input
+            aria-label="Moonraker address"
             value={moonrakerUrl}
             onChange={(e) => setMoonrakerUrl(e.target.value)}
             placeholder="http://printer-ip:7125"
             style={{ flex: 1 }}
           />
-          <button type="button" onClick={handleMoonrakerSync}>Sync</button>
+          <button type="button" disabled={busy || !moonrakerUrl.trim()} onClick={handleMoonrakerSync}>Sync</button>
         </div>
-        {syncMsg && <div style={{ marginTop: 6, fontSize: 11, color: syncMsg.startsWith("Error") ? "#f87171" : "#4ade80" }}>{syncMsg}</div>}
+        {syncMsg && <div role="status" style={{ marginTop: 6, fontSize: 11, color: syncMsg.startsWith("Error") ? "#f87171" : "#4ade80" }}>{syncMsg}</div>}
       </section>
+
+      {importedMacros.length > 0 && <section className="imported-macro-picker">
+        <label htmlFor="imported-macro">Open macro</label>
+        <select id="imported-macro" value={selectedMacro?.name ?? ""} onChange={e => setSelection(e.target.value)}>
+          <option value="">Sample macro</option>
+          {sortedMacros.map(macro => <option key={macro.name}>{macro.name}</option>)}
+        </select>
+        {selectedMacro?.description && <p>{selectedMacro.description}</p>}
+        <button type="button" disabled={busy} onClick={() => onOpenMacro(selectedMacro ?? null)}>Open in editor</button>
+        <small>Draft edits stay in this session. Export .cfg to save a copy.</small>
+      </section>}
 
       {/* Config File Dropzone */}
       <section>
@@ -101,7 +141,9 @@ export function PrinterConfigPanel({
         <p style={{ margin: "4px 0 8px", color: "#94a3b8", fontSize: 11 }}>
           Select <code>printer.cfg</code> (and optionally <code>macros.cfg</code>).
         </p>
-        <input type="file" accept=".cfg,.txt" multiple onChange={(e) => handleFiles(e.target.files)} style={{ width: "100%" }} />
+        <input type="file" aria-label="Klipper config files" accept=".cfg,.txt" multiple disabled={busy}
+          onChange={(e) => { void handleFiles(e.target.files); e.target.value = ""; }} style={{ width: "100%" }} />
+        {fileError && <p role="alert">{fileError}</p>}
         {missingIncludes.length > 0 && (
           <div style={{ marginTop: 6, fontSize: 11, color: "#fbbf24" }}>
             Detected [include]: {missingIncludes.join(", ")}

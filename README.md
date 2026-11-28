@@ -49,6 +49,12 @@ Probe motion appears in purple in the 3D viewport. The desktop preview uses conf
 
 Open **Command library** in the builder to see a short description for each entry. Search by command name, module, or purpose. The library lists commands from the [Klipper](https://www.klipper3d.org/G-Codes.html) and [Kalico](https://docs.kalico.gg/G-Codes.html) references, plus selected commands from Cartographer, Eddy-NG, Beacon, KAMP, Shake&Tune, Happy Hare, and AFC. The desktop app also shows descriptions from imported macro configs when provided. Availability and parameters depend on the firmware version and printer configuration.
 
+### Edit macros from your printer
+
+In the desktop app, enter the Moonraker address under **Printer settings** and click **Sync**. The app reads the macro definitions from the configuration Klipper loaded at its last start or restart, including macros loaded from included config files. Choose a macro under **Open macro** and click **Open in editor**. You can also import local `.cfg` files to populate the same picker.
+
+The editor keeps the original G-code or Jinja2 source, inline Kalico Python, and macro options such as `rename_existing` and `variable_*`. Edits stay in the current app session. Use **Export .cfg** to save the edited definition locally. Sync reads from the printer without changing its config. A Kalico `!!include` reference stays a reference to its original source file.
+
 Select **Template helpers** to insert common Jinja2 constructs and actions. For [Kalico Python macros](https://docs.kalico.gg/Command_Templates.html#python), change **Macro language** to **Kalico Python**. The editor inserts Python helpers and exports the required line prefixes. Kalico executes that code on the printer.
 
 The simulator previews supported commands such as motion, probing, speed overrides, heater targets and waits, and fan changes. It reports commands whose effects it cannot model. Firmware configuration, calibration, and plugin behavior still depend on the printer.

@@ -122,6 +122,8 @@ export function compileKlipperConfig(doc: MacroDocument): string {
     .map((line) => `  ${line}`)
     .join("\n");
 
-  const desc = doc.description ? `description: ${doc.description}\n` : "";
-  return `[gcode_macro ${doc.name.toUpperCase()}]\n${desc}gcode:\n${body}\n`;
+  const entries = Object.entries(doc.configOptions ?? {});
+  if (doc.description) entries.unshift(["description", doc.description]);
+  const options = entries.map(([key, value]) => `${key}: ${value.replace(/\r?\n/g, "\n  ")}\n`).join("");
+  return `[gcode_macro ${doc.name.toUpperCase()}]\n${options}gcode:\n${body}\n`;
 }

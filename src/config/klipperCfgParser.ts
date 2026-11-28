@@ -5,6 +5,7 @@ export interface ParsedMacroEntry {
   description: string;
   variables: Record<string, unknown>;
   gcode: string;
+  options: Record<string, string>;
 }
 
 export interface ParsedKlipperConfig {
@@ -47,6 +48,33 @@ function stripInlineComment(line: string): string {
   return line.trimEnd();
 }
 
+export function readMacroSections(sections: Record<string, unknown>): ParsedMacroEntry[] {
+  const macros: ParsedMacroEntry[] = [];
+  for (const [section, value] of Object.entries(sections)) {
+    const match = /^gcode_macro\s+(.+)$/i.exec(section);
+    if (!match || !value || typeof value !== "object" || Array.isArray(value)) continue;
+    const entries = Object.fromEntries(Object.entries(value).map(([key, entry]) => [key.toLowerCase(), entry]));
+    if (typeof entries.gcode !== "string") continue;
+    const options: Record<string, string> = {};
+    const variables: Record<string, unknown> = {};
+    for (const [key, entry] of Object.entries(entries)) {
+      if (key === "gcode" || key === "description" || !/^[a-z0-9_.-]+$/.test(key)) continue;
+      if (typeof entry === "string") options[key] = entry;
+      if (key.startsWith("variable_")) {
+        variables[key.slice(9)] = typeof entry === "string" ? parseKlipperValue(entry) : entry;
+      }
+    }
+    macros.push({
+      name: match[1].trim(),
+      description: typeof entries.description === "string" ? entries.description : "",
+      variables,
+      options,
+      gcode: entries.gcode,
+    });
+  }
+  return macros;
+}
+
 export function parseKlipperConfig(
   files: string[],
   baseProfile?: Partial<PrinterProfile>
@@ -60,10 +88,16 @@ export function parseKlipperConfig(
 
     for (const rawLine of content.split(/\r?\n/)) {
       const trimmed = rawLine.trim();
-      if (!trimmed || trimmed.startsWith("#") || trimmed.startsWith(";")) continue;
+      const indented = /^[ \t]/.test(rawLine);
+      if (!trimmed || trimmed.startsWith("#") || trimmed.startsWith(";")) {
+        if (currentSection && currentKey === "gcode" && (indented || !trimmed)) {
+          rawSections[currentSection].gcode += "\n" + rawLine.replace(/^\s{1,4}/, "");
+        }
+        continue;
+      }
 
       const secMatch = trimmed.match(/^\[([^\]]+)\]/);
-      if (secMatch && !rawLine.startsWith(" ") && !rawLine.startsWith("\t")) {
+      if (secMatch && !indented) {
         const header = secMatch[1].trim();
         if (header.toLowerCase().startsWith("include ")) {
           includes.push(header.slice(8).trim());
@@ -79,7 +113,7 @@ export function parseKlipperConfig(
 
       if (!currentSection) continue;
 
-      if ((rawLine.startsWith(" ") || rawLine.startsWith("\t")) && currentKey) {
+      if (indented && currentKey) {
         const lineText = currentKey === "gcode" ? rawLine.replace(/^\s{1,4}/, "") : stripInlineComment(trimmed);
         const prev = rawSections[currentSection][currentKey];
         rawSections[currentSection][currentKey] = prev ? `${prev}\n${lineText}` : lineText;
@@ -96,7 +130,6 @@ export function parseKlipperConfig(
   }
 
   const settings: Record<string, Record<string, unknown>> = {};
-  const macros: ParsedMacroEntry[] = [];
 
   for (const [secName, entries] of Object.entries(rawSections)) {
     const typed: Record<string, unknown> = {};
@@ -105,21 +138,6 @@ export function parseKlipperConfig(
     }
     settings[secName.toLowerCase()] = typed;
 
-    if (secName.toLowerCase().startsWith("gcode_macro ")) {
-      const macroName = secName.slice(12).trim();
-      const variables: Record<string, unknown> = {};
-      for (const [k, v] of Object.entries(typed)) {
-        if (k.startsWith("variable_")) {
-          variables[k.slice(9)] = v;
-        }
-      }
-      macros.push({
-        name: macroName,
-        description: String(typed.description ?? ""),
-        variables,
-        gcode: String(entries.gcode ?? ""),
-      });
-    }
   }
 
   const num = (sec: string, key: string, fallback: number): number => {
@@ -160,5 +178,5 @@ export function parseKlipperConfig(
     fixtures: baseProfile?.fixtures ?? [],
   };
 
-  return { profile, settings, macros, includes };
+  return { profile, settings, macros: readMacroSections(rawSections), includes };
 }

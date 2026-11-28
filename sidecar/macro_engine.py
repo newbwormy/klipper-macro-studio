@@ -2,6 +2,7 @@ import sys
 import json
 import traceback
 import jinja2
+from jinja2.sandbox import SandboxedEnvironment
 
 
 class KlipperMacroError(Exception):
@@ -10,7 +11,7 @@ class KlipperMacroError(Exception):
 
 def build_env(enable_extensions: bool = False) -> jinja2.Environment:
     extensions = ["jinja2.ext.do", "jinja2.ext.loopcontrols"] if enable_extensions else []
-    return jinja2.Environment(
+    return SandboxedEnvironment(
         block_start_string="{%",
         block_end_string="%}",
         variable_start_string="{",

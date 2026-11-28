@@ -29,7 +29,7 @@ export function createTourSteps(browser: boolean): TourStep[] {
 
   if (!browser) {
     steps.push({ title: "Set up the printer preview", target: "printer",
-      text: "Import a printer.cfg or sync printer settings through Moonraker. You can also adjust the build volume and initial state here." });
+      text: "Sync with Moonraker or import a printer.cfg, then open a custom macro in the editor. You can also adjust the build volume and initial state here." });
   }
 
   steps.push(

@@ -49,4 +49,5 @@ export interface MacroDocument {
   blocks: MacroBlock[];
   language?: "jinja" | "python";
   python?: string;
+  configOptions?: Record<string, string>;
 }

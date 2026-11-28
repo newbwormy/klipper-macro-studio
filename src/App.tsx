@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { isTauri } from "@tauri-apps/api/core";
 import { MacroDocument } from "./builder/blockTypes";
 import { compileBrowserPreview, compileKlipperConfig, compileMacroBody } from "./builder/compiler";
@@ -80,13 +80,16 @@ export default function App() {
   const [initialState, setInitialState] = useState<SimInitialState>(DEFAULT_INITIAL);
   const [configSettings, setConfigSettings] = useState<Record<string, Record<string, unknown>>>({});
   const [importedMacros, setImportedMacros] = useState<ParsedMacroEntry[]>([]);
+  const [macroSource, setMacroSource] = useState("");
   const [testParams, setTestParams] = useState<Record<string, string>>({
     BED_TEMP: "65",
     HOTEND_TEMP: "220",
   });
   const [kalicoMode, setKalicoMode] = useState(false);
 
-  const [macroDoc, setMacroDoc] = useState<MacroDocument>(DEFAULT_MACRO);
+  const [macroDoc, loadMacroDoc] = useState<MacroDocument>(DEFAULT_MACRO);
+  const activeDraft = useRef("sample");
+  const drafts = useRef(new Map<string, MacroDocument>());
   const [renderedGcode, setRenderedGcode] = useState("");
   const [evalError, setEvalError] = useState<string | null>(null);
   const [simResult, setSimResult] = useState<SimulationResult>({
@@ -101,6 +104,41 @@ export default function App() {
   const [centerTab, setCenterTab] = useState<"builder" | "code">("builder");
   const [tourIndex, setTourIndex] = useState(initialTourStep);
   const tourStep = tourIndex === null ? undefined : tourSteps[tourIndex];
+
+  const setMacroDoc = (doc: MacroDocument) => {
+    drafts.current.set(activeDraft.current, doc);
+    loadMacroDoc(doc);
+  };
+
+  const openImportedMacro = (macro: ParsedMacroEntry | null) => {
+    const draftKey = macro ? JSON.stringify([macroSource, macro.name.toUpperCase()]) : "sample";
+    if (activeDraft.current === draftKey) {
+      setCenterTab("builder");
+      return;
+    }
+    activeDraft.current = draftKey;
+    const draft = drafts.current.get(draftKey);
+    if (draft) {
+      loadMacroDoc(draft);
+    } else if (macro) {
+      const gcode = macro.gcode.trimEnd();
+      const lines = gcode.split(/\r?\n/);
+      const python = Boolean(gcode.trim()) && lines.every(line => !line.trim() || /^\s*!(?!\!)/.test(line));
+      loadMacroDoc({
+        name: macro.name,
+        description: macro.description,
+        configOptions: macro.options,
+        params: [],
+        blocks: python ? [] : [{ id: crypto.randomUUID(), type: "raw_gcode", code: gcode }],
+        ...(python && { language: "python", python: lines.map(line => line.replace(/^\s*!/, "")).join("\n") }),
+      });
+    } else {
+      loadMacroDoc(DEFAULT_MACRO);
+    }
+    setCenterTab("builder");
+    setIsPlaying(false);
+    setCurrentTime(0);
+  };
 
   const closeTour = () => {
     setTourIndex(null);
@@ -243,11 +281,18 @@ export default function App() {
             onProfileChange={setProfile}
             onInitialStateChange={setInitialState}
             onTestParamsChange={setTestParams}
-            onConfigImported={(parsed) => {
+            importedMacros={importedMacros}
+            onOpenMacro={openImportedMacro}
+            onConfigImported={(parsed, source) => {
               setConfigSettings(parsed.settings);
               setImportedMacros(parsed.macros);
+              setMacroSource(source);
             }}
-            onMoonrakerSynced={(settings) => setConfigSettings(settings)}
+            onMoonrakerSynced={(result) => {
+              setConfigSettings(result.configSettings);
+              setImportedMacros(result.macros);
+              setMacroSource(result.source);
+            }}
           />
         </aside>}
 
