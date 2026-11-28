@@ -150,12 +150,35 @@ function PrinterScene({
   );
 }
 
+function PreviewUnavailable() {
+  return (
+    <div className="preview-unavailable" role="status">
+      <strong>3D preview unavailable</strong>
+      <p>The browser couldn’t start the 3D renderer. You can still edit macros and export a config.</p>
+    </div>
+  );
+}
+
+class PreviewBoundary extends React.Component<React.PropsWithChildren, { failed: boolean }> {
+  state = { failed: false };
+
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+
+  render() {
+    return this.state.failed ? <PreviewUnavailable /> : this.props.children;
+  }
+}
+
 export function PrinterViewport(props: SceneProps) {
   return (
     <div style={{ width: "100%", height: "100%", background: "radial-gradient(ellipse at 50% 58%, #202f3e, #101823 75%)" }}>
-      <Canvas camera={{ position: [280, 230, 280], fov: 45, near: 1, far: 3000 }}>
-        <PrinterScene {...props} />
-      </Canvas>
+      <PreviewBoundary>
+        <Canvas camera={{ position: [280, 230, 280], fov: 45, near: 1, far: 3000 }} fallback={<PreviewUnavailable />}>
+          <PrinterScene {...props} />
+        </Canvas>
+      </PreviewBoundary>
     </div>
   );
 }
