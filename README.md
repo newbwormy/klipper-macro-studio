@@ -55,6 +55,8 @@ In the desktop app, enter the Moonraker address under **Printer settings** and c
 
 The editor keeps the original G-code or Jinja2 source, inline Kalico Python, and macro options such as `rename_existing` and `variable_*`. Edits stay in the current app session. Use **Export .cfg** to save the edited definition locally. Sync reads from the printer without changing its config. A Kalico `!!include` reference stays a reference to its original source file.
 
+The desktop preview renders the open macro and expands calls to other macros from the imported config. Enter any required arguments under **Test Parameters**. Calls use the mock printer state, and the preview skips Python or external include macros with a diagnostic.
+
 Select **Template helpers** to insert common Jinja2 constructs and actions. For [Kalico Python macros](https://docs.kalico.gg/Command_Templates.html#python), change **Macro language** to **Kalico Python**. The editor inserts Python helpers and exports the required line prefixes. Kalico executes that code on the printer.
 
 The simulator previews supported commands such as motion, probing, speed overrides, heater targets and waits, and fan changes. It reports commands whose effects it cannot model. Firmware configuration, calibration, and plugin behavior still depend on the printer.

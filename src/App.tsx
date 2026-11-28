@@ -16,6 +16,7 @@ import sampleGcode from "./demo/prime-and-wipe.gcode?raw";
 
 const browserDemo = !isTauri();
 const tourSteps = createTourSteps(browserDemo);
+const EMPTY_SIMULATION: SimulationResult = { segments: [], issues: [], totalDuration: 0 };
 
 const DEFAULT_PROFILE: PrinterProfile = {
   name: "256mm CoreXY",
@@ -92,11 +93,9 @@ export default function App() {
   const drafts = useRef(new Map<string, MacroDocument>());
   const [renderedGcode, setRenderedGcode] = useState("");
   const [evalError, setEvalError] = useState<string | null>(null);
-  const [simResult, setSimResult] = useState<SimulationResult>({
-    segments: [],
-    issues: [],
-    totalDuration: 0,
-  });
+  const [simResult, setSimResult] = useState(EMPTY_SIMULATION);
+  const [previewPending, setPreviewPending] = useState(!browserDemo);
+  const [previewWarnings, setPreviewWarnings] = useState<string[]>([]);
 
   const [currentTime, setCurrentTime] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -136,6 +135,11 @@ export default function App() {
       loadMacroDoc(DEFAULT_MACRO);
     }
     setCenterTab("builder");
+    setPreviewPending(true);
+    setEvalError(null);
+    setPreviewWarnings([]);
+    setRenderedGcode("");
+    setSimResult(EMPTY_SIMULATION);
     setIsPlaying(false);
     setCurrentTime(0);
   };
@@ -183,31 +187,35 @@ export default function App() {
 
   useEffect(() => {
     if (browserDemo) return;
+    setRenderedGcode("");
+    setEvalError(null);
+    setPreviewWarnings([]);
+    setSimResult(EMPTY_SIMULATION);
+    setIsPlaying(false);
+    setCurrentTime(0);
     if (macroDoc.language === "python") {
-      setRenderedGcode("");
-      setEvalError(null);
-      setSimResult({ segments: [], issues: [], totalDuration: 0 });
-      setIsPlaying(false);
-      setCurrentTime(0);
+      setPreviewPending(false);
       return;
     }
+    setPreviewPending(true);
     let cancelled = false;
     const timer = setTimeout(async () => {
       const body = compileMacroBody(macroDoc);
       try {
-        const res = await evaluateKlipperMacro(body, mockPrinter, testParams, kalicoMode);
+        const res = await evaluateKlipperMacro(body, mockPrinter, testParams, kalicoMode, macroDoc.name, importedMacros);
         if (cancelled) return;
         if (res.ok && res.gcode !== undefined) {
           setRenderedGcode(res.gcode);
-          setEvalError(null);
+          setPreviewWarnings(res.warnings ?? []);
           const sim = simulateGcode(res.gcode, profile, initialState, configSettings);
           setSimResult(sim);
-          setCurrentTime(0);
         } else {
           setEvalError(res.error ?? "Jinja2 evaluation failed");
         }
       } catch (err) {
         if (!cancelled) setEvalError(String(err));
+      } finally {
+        if (!cancelled) setPreviewPending(false);
       }
     }, 180);
 
@@ -215,7 +223,7 @@ export default function App() {
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [macroDoc, mockPrinter, testParams, kalicoMode, profile, initialState, configSettings]);
+  }, [macroDoc, mockPrinter, testParams, kalicoMode, profile, initialState, configSettings, importedMacros]);
 
   const handleTimeAdvance = (delta: number) => {
     setCurrentTime((prev) => {
@@ -331,7 +339,7 @@ export default function App() {
                 </h3>
                 <pre>
                   {macroDoc.language === "python" ? "Kalico runs Python macros on the printer. This editor exports the source."
-                    : evalError ? `ERROR: ${evalError}` : renderedGcode}
+                    : previewPending ? "Rendering macro…" : evalError ? `ERROR: ${evalError}` : renderedGcode}
                 </pre>
               </div>
             </div>
@@ -358,6 +366,11 @@ export default function App() {
                 {activeSeg.message && <span>{activeSeg.message}</span>}
               </div>
             )}
+            {!activeSeg && macroDoc.language !== "python" && <div className="preview-readout" role="status">
+              {previewPending ? "Rendering macro…"
+                : evalError ? "Preview couldn’t render. Check the error below and fill in any required Test Parameters."
+                  : "No previewable G-code. Check that the macro produces moves and that any macros it calls were imported."}
+            </div>}
             {activeSeg && <div className="preview-temps">
               <span>Hotend <strong>{activeSeg.toolTemp}°C</strong></span>
               <span>Bed <strong>{activeSeg.bedTemp}°C</strong></span>
@@ -414,9 +427,10 @@ export default function App() {
           </div>
 
           {/* Diagnostics / Errors */}
-          {(evalError || simResult.issues.length > 0) && (
+          {(evalError || previewWarnings.length > 0 || simResult.issues.length > 0) && (
             <div className="diagnostics" aria-label="Preview diagnostics">
               {evalError && <div className="diagnostic diagnostic--error"><strong>Jinja2 error</strong> {evalError}</div>}
+              {previewWarnings.map((warning, i) => <div key={i} className="diagnostic">{warning}</div>)}
               {simResult.issues.map((iss, i) => (
                 <div key={i} className={`diagnostic diagnostic--${iss.severity}`}>
                   <strong>Line {iss.lineNumber}:</strong> {iss.message} <code>({iss.gcode})</code>

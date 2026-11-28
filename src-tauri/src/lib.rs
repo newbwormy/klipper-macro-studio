@@ -20,18 +20,17 @@ async fn evaluate_macro(
     });
     let line = format!("{}\n", request);
 
-    {
+    let response_line = {
         let mut child = state.child.lock().await;
         child
             .write(line.as_bytes())
             .map_err(|e| format!("Failed writing to Python sidecar: {e}"))?;
-    }
-
-    let mut rx = state.stdout_rx.lock().await;
-    let response_line = rx
-        .recv()
-        .await
-        .ok_or_else(|| "Python sidecar exited unexpectedly".to_string())?;
+        // Keep the request and response paired while overlapping previews wait.
+        let mut rx = state.stdout_rx.lock().await;
+        rx.recv()
+            .await
+            .ok_or_else(|| "Python sidecar exited unexpectedly".to_string())?
+    };
 
     serde_json::from_str(&response_line)
         .map_err(|e| format!("Invalid JSON from sidecar: {e}"))
