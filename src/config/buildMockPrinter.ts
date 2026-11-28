@@ -30,6 +30,11 @@ export function buildMockPrinterState(
       temperature: initial.bedTemp,
       target: initial.bedTemp,
     },
+    exclude_object: {
+      objects: [],
+      excluded_objects: [],
+      current_object: null,
+    },
     probe: {
       name: configSettings.cartographer ? "cartographer" : "probe",
       last_query: false,
