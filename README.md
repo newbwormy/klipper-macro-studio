@@ -43,7 +43,7 @@ Probe motion appears in purple in the 3D viewport. The desktop preview uses conf
 
 ## Command library and macro helpers
 
-Open **Command library** in the builder and search by command or module. The library lists commands from the [Klipper](https://www.klipper3d.org/G-Codes.html) and [Kalico](https://docs.kalico.gg/G-Codes.html) references, plus selected commands from Cartographer, Beacon, KAMP, Shake&Tune, Happy Hare, and AFC. The desktop app also lists macros from imported config files. Availability and parameters depend on the firmware version and printer configuration.
+Open **Command library** in the builder to see a short description for each entry. Search by command name, module, or purpose. The library lists commands from the [Klipper](https://www.klipper3d.org/G-Codes.html) and [Kalico](https://docs.kalico.gg/G-Codes.html) references, plus selected commands from Cartographer, Beacon, KAMP, Shake&Tune, Happy Hare, and AFC. The desktop app also shows descriptions from imported macro configs when provided. Availability and parameters depend on the firmware version and printer configuration.
 
 Select **Template helpers** to insert common Jinja2 constructs and actions. For [Kalico Python macros](https://docs.kalico.gg/Command_Templates.html#python), change **Macro language** to **Kalico Python**. The editor inserts Python helpers and exports the required line prefixes. Kalico executes that code on the printer.
 

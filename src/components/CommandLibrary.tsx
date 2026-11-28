@@ -1,9 +1,13 @@
 import { useRef, useState } from "react";
 import { commandCatalog, jinjaHelpers, pythonHelpers } from "../builder/commandCatalog";
+import { commandDescriptions, helperDescriptions } from "../builder/commandDescriptions";
+import type { ParsedMacroEntry } from "../config/klipperCfgParser";
+
+type ImportedCommand = Pick<ParsedMacroEntry, "name" | "description">;
 
 export function CommandLibrary({ python, imported, onInsert }: {
   python: boolean;
-  imported: string[];
+  imported: ImportedCommand[];
   onInsert: (code: string) => void;
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
@@ -13,12 +17,27 @@ export function CommandLibrary({ python, imported, onInsert }: {
   const selected = source === "Imported macros" && !imported.length ? "Klipper" : source;
   const helpers = python ? pythonHelpers : jinjaHelpers;
   const catalog = commandCatalog[selected];
+  const commandCode = (name: string) => python ? `emit(${JSON.stringify(name)})` : name;
   const rows = selected === "Template helpers"
-    ? Object.entries(helpers).map(([name, code]) => ({ name, code, group: python ? "Kalico Python" : "Jinja2" }))
-    : Object.entries(catalog?.groups ?? { "Imported macros": [...new Set(imported)] }).flatMap(([group, commands]) =>
-      commands.map((name) => ({ name, group, code: python ? `emit(${JSON.stringify(name)})` : name })));
+    ? Object.entries(helpers).map(([name, code]) => ({
+      name, code, group: python ? "Kalico Python" : "Jinja2", description: helperDescriptions[name],
+    }))
+    : catalog
+      ? Object.entries(catalog.groups).flatMap(([group, commands]) => commands.map((name) => ({
+        name, group, code: commandCode(name),
+        description: selected === "KAMP" && name === "BED_MESH_CALIBRATE"
+          ? "Measure the bed only around the objects in the current print."
+          : commandDescriptions[name],
+      })))
+      : Array.from(new Map(imported.map(macro => [macro.name, macro])).values(), ({ name, description }) => ({
+        name, group: "Imported macros", code: commandCode(name),
+        description: description.trim() || "Custom macro from your printer config. No description provided.",
+      }));
   const terms = query.toLowerCase().trim().split(/\s+/);
-  const matches = rows.filter(({ name, group }) => terms.every(term => `${name} ${group}`.toLowerCase().includes(term)));
+  const matches = rows.filter(({ name, group, description }) => {
+    const searchable = `${name} ${name.replace(/_/g, " ")} ${group} ${description ?? ""}`.toLowerCase();
+    return terms.every(term => searchable.includes(term));
+  });
 
   return (
     <>
@@ -38,7 +57,7 @@ export function CommandLibrary({ python, imported, onInsert }: {
             </select>
           </label>
           <input aria-label="Search commands" value={query} onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search name or module" />
+            placeholder="Search commands by name or purpose" />
         </div>
         {catalog && <p style={{ fontSize: 12 }}>
           <a href={catalog.reference} target="_blank" rel="noreferrer" style={{ color: "#7dd3fc" }}>
@@ -46,12 +65,13 @@ export function CommandLibrary({ python, imported, onInsert }: {
           </a>
         </p>}
         <div className="command-results">
-          {matches.map(({ name, code, group }) => (
+          {matches.map(({ name, code, group, description }) => (
             <button key={`${group}:${name}`} type="button" onClick={() => {
               onInsert(code);
               dialog.current?.close();
             }}>
-              {name} <small style={{ color: "#94a3b8" }}>{group}</small>
+              <span className="command-result-title"><span>{name}</span><small>{group}</small></span>
+              <span className="command-result-description">{description || "See the command reference for its purpose."}</span>
             </button>
           ))}
           {!matches.length && <p>No matching commands.</p>}

@@ -3,6 +3,7 @@ import { MacroBlock, MacroDocument } from "../builder/blockTypes";
 import { getAvailableVariables, VariableChip } from "../builder/printerVariables";
 import { PROBE_COMMANDS, type ProbeCommand } from "../builder/probeCommands";
 import { CommandLibrary } from "./CommandLibrary";
+import type { ParsedMacroEntry } from "../config/klipperCfgParser";
 
 const makeId = () => crypto.randomUUID().slice(0, 8);
 
@@ -370,7 +371,7 @@ export function MacroBuilder({
 }: {
   doc: MacroDocument;
   onChange: (next: MacroDocument) => void;
-  importedCommands: string[];
+  importedCommands: Pick<ParsedMacroEntry, "name" | "description">[];
 }) {
   const python = doc.language === "python";
   const vars = getAvailableVariables(doc);

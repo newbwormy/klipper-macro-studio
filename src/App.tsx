@@ -231,7 +231,7 @@ export default function App() {
           </div>
 
           {centerTab === "builder" ? (
-            <MacroBuilder doc={macroDoc} onChange={setMacroDoc} importedCommands={importedMacros.map(({ name }) => name)} />
+            <MacroBuilder doc={macroDoc} onChange={setMacroDoc} importedCommands={importedMacros} />
           ) : (
             <div className="code-grid">
               <div className="code-panel">

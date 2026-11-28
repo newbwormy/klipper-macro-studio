@@ -212,7 +212,9 @@ code, pre { font-family: var(--mono); }
 .command-filters input { flex: 1 1 160px; }
 .command-dialog p { margin: 9px 0; font-size: 12px; }
 .command-results { display: grid; gap: 4px; max-height: 50vh; overflow: auto; margin-top: 10px; }
-.command-results button { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 12px; text-align: left; overflow-wrap: anywhere; }
+.command-results button { display: grid; gap: 3px; padding: 8px 10px; text-align: left; overflow-wrap: anywhere; }
+.command-result-title { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 2px 12px; }
+.command-result-title small, .command-result-description { color: var(--muted); font-size: 12px; font-weight: 400; }
 
 @media (max-width: 1120px) {
   .workspace--desktop { grid-template-columns: 205px minmax(0, 1.35fr) minmax(0, 1fr); }
