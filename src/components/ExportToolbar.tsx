@@ -41,7 +41,7 @@ export function ExportToolbar({ doc }: { doc: MacroDocument }) {
   };
 
   return (
-    <div className="export-controls">
+    <div className="export-controls" data-tour-target="export">
       <button type="button" onClick={handleCopy}>Copy Macro</button>
       <button type="button" className="primary-button" onClick={handleSaveCfg}>Export .cfg</button>
       <span className="export-status" role="status">{status}</span>

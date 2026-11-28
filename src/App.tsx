@@ -8,12 +8,14 @@ import { evaluateKlipperMacro } from "./lib/macroApi";
 import { simulateGcode } from "./sim/gcodeSimulator";
 import { PrinterProfile, SimInitialState, SimulationResult } from "./sim/types";
 import { ExportToolbar } from "./components/ExportToolbar";
+import { createTourSteps, FirstRunTour, initialTourStep, tourStorageKey } from "./components/FirstRunTour";
 import { MacroBuilder } from "./components/MacroBuilder";
 import { PrinterConfigPanel } from "./components/PrinterConfigPanel";
 import { PrinterViewport } from "./components/PrinterViewport";
 import sampleGcode from "./demo/prime-and-wipe.gcode?raw";
 
 const browserDemo = !isTauri();
+const tourSteps = createTourSteps(browserDemo);
 
 const DEFAULT_PROFILE: PrinterProfile = {
   name: "256mm CoreXY",
@@ -95,6 +97,30 @@ export default function App() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [speed, setSpeed] = useState(1);
   const [centerTab, setCenterTab] = useState<"builder" | "code">("builder");
+  const [tourIndex, setTourIndex] = useState(initialTourStep);
+  const tourStep = tourIndex === null ? undefined : tourSteps[tourIndex];
+
+  const closeTour = () => {
+    setTourIndex(null);
+    try {
+      localStorage.setItem(tourStorageKey, "1");
+    } catch {
+      // The tutorial can still be dismissed when storage is unavailable.
+    }
+  };
+
+  const goToTourStep = (index: number) => {
+    const step = tourSteps[index];
+    if (!step) return;
+    if (step.view) setCenterTab(step.view);
+    setTourIndex(index);
+  };
+
+  useEffect(() => {
+    if (!tourStep?.target) return;
+    document.querySelector(`[data-tour-target="${tourStep.target}"]`)
+      ?.scrollIntoView({ block: "nearest", inline: "nearest" });
+  }, [tourStep]);
 
   const mockPrinter = useMemo(
     () => buildMockPrinterState(profile, initialState, configSettings, importedMacros),
@@ -170,7 +196,7 @@ export default function App() {
   );
 
   return (
-    <div className="studio">
+    <div className={tourStep ? "studio studio--tour" : "studio"} data-tour-step={tourStep?.target}>
       <header className="app-header">
         <div className="wordmark">
           <span className="studio-mark" aria-hidden="true"><span /></span>
@@ -191,11 +217,22 @@ export default function App() {
             />{" "}
             Kalico Jinja2 Extensions
         </label>}
-        <ExportToolbar doc={macroDoc} />
+        <div className="header-actions">
+          <button type="button" className="tour-trigger" aria-expanded={Boolean(tourStep)}
+            onClick={() => tourStep ? closeTour() : goToTourStep(0)}>
+            Tutorial
+          </button>
+          <ExportToolbar doc={macroDoc} />
+        </div>
       </header>
 
+      {tourStep && tourIndex !== null && <FirstRunTour step={tourStep} index={tourIndex} count={tourSteps.length}
+        onBack={() => goToTourStep(tourIndex - 1)}
+        onNext={() => tourIndex === tourSteps.length - 1 ? closeTour() : goToTourStep(tourIndex + 1)}
+        onClose={closeTour} />}
+
       <div className={browserDemo ? "workspace workspace--browser" : "workspace workspace--desktop"}>
-        {!browserDemo && <aside className="panel printer-panel" aria-label="Printer settings">
+        {!browserDemo && <aside className="panel printer-panel" aria-label="Printer settings" data-tour-target="printer">
           <div className="panel-heading"><h2>Printer settings</h2></div>
           <PrinterConfigPanel
             profile={profile}
@@ -225,6 +262,7 @@ export default function App() {
               type="button"
               onClick={() => setCenterTab("code")}
               aria-pressed={centerTab === "code"}
+              data-tour-target="code"
             >
               Generated code
             </button>
@@ -279,7 +317,7 @@ export default function App() {
             </div>}
           </div>
 
-          <div className="transport">
+          <div className="transport" data-tour-target="preview">
             <div className="transport-status">
               <span>{macroDoc.language === "python" ? "Playback unavailable for Python"
                 : browserDemo ? (browserGcode === sampleGcode ? "Sample playback" : "Literal G-code playback")

@@ -41,7 +41,8 @@ export function CommandLibrary({ python, imported, onInsert }: {
 
   return (
     <>
-      <button type="button" className="library-trigger" onClick={() => dialog.current?.showModal()}>Command library</button>
+      <button type="button" className="library-trigger" data-tour-target="library"
+        onClick={() => dialog.current?.showModal()}>Command library</button>
       <dialog ref={dialog} aria-labelledby="library-title" className="command-dialog">
         <div className="dialog-heading">
           <h2 id="library-title">Command library</h2>

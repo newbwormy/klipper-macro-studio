@@ -398,7 +398,7 @@ export function MacroBuilder({
             onChange({ ...doc, blocks: [...doc.blocks, { id: makeId(), type: "raw_gcode", code }] });
           }
         }} />
-        {!python && <div className="palette-blocks">
+        {!python && <div className="palette-blocks" data-tour-target="builder">
           <h3>Add block</h3>
           {Object.keys(BLOCK_TEMPLATES).map((key) => (
           <button
