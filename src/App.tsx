@@ -20,7 +20,8 @@ const tourSteps = createTourSteps(browserDemo);
 const DEFAULT_PROFILE: PrinterProfile = {
   name: "256mm CoreXY",
   axisMin: { x: 0, y: 0, z: 0 },
-  axisMax: { x: 256, y: 256, z: 256 },
+  axisMax: { x: 256, y: 284, z: 256 },
+  printArea: { min: { x: 0, y: 0 }, max: { x: 256, y: 256 } },
   homePos: { x: 128, y: 128, z: 0 },
   minExtrudeTemp: 170,
   maxVelocity: 300,
@@ -28,9 +29,10 @@ const DEFAULT_PROFILE: PrinterProfile = {
     {
       id: "purge",
       name: "Purge Bucket",
-      min: { x: 0, y: 236, z: 0 },
-      max: { x: 35, y: 256, z: 12 },
-      color: "#eab308",
+      min: { x: 0, y: 262, z: 0 },
+      max: { x: 35, y: 282, z: 12 },
+      color: "#b48540",
+      kind: "purge_bucket",
     },
   ],
 };
@@ -47,7 +49,7 @@ const DEFAULT_INITIAL: SimInitialState = {
 
 const DEFAULT_MACRO: MacroDocument = {
   name: "DEMO_PRIME_AND_WIPE",
-  description: "Homes if needed, heats, wipes over purge bucket, and lays a prime line",
+  description: "Homes if needed, heats, purges off the plate, and lays a prime line",
   params: [
     { name: "BED_TEMP", defaultValue: "60", type: "float" },
     { name: "HOTEND_TEMP", defaultValue: "215", type: "float" },
@@ -64,7 +66,7 @@ const DEFAULT_MACRO: MacroDocument = {
     },
     { id: "b4", type: "temp", heater: "bed", wait: false, temp: "bed_temp" },
     { id: "b5", type: "temp", heater: "extruder", wait: true, temp: "hotend_temp" },
-    { id: "b6", type: "move", rapid: true, x: "18", y: "245", z: "15", f: "9000" },
+    { id: "b6", type: "move", rapid: true, x: "18", y: "272", z: "15", f: "9000" },
     { id: "b7", type: "move", rapid: false, e: "12", f: "300" },
     { id: "b8", type: "move", rapid: true, x: "15", y: "20", z: "0.3", f: "9000" },
     { id: "b9", type: "move", rapid: false, x: "15", y: "180", e: "15", f: "1500" },

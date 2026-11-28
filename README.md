@@ -21,6 +21,8 @@ Latest release: [v0.1.1](https://github.com/newbwormy/klipper-macro-studio/relea
 
 The first-run tutorial walks through building a macro, finding commands, previewing motion, and exporting a config. Use **Tutorial** in the header to replay it.
 
+The sample printer shows a Stealthburner-style toolhead over a 256 × 256 mm print plate, with extra Y travel to reach the purge bucket behind the plate.
+
 Try the visual builder, download a `.cfg` file, and play the bundled prime-and-wipe simulation. Editing the macro switches browser playback to its literal G-code. The desktop app evaluates Jinja2 and connects to Moonraker.
 
 To preview locally, run `npm ci` and `npm run dev`, then open the URL printed by Vite. To publish the demo, set **Settings → Pages → Source** to **GitHub Actions**, then run **Deploy browser demo** from the Actions tab.

@@ -10,12 +10,14 @@ export interface PrinterFixture {
   min: Vec3;
   max: Vec3;
   color: string;
+  kind?: "purge_bucket";
 }
 
 export interface PrinterProfile {
   name: string;
   axisMin: Vec3;
   axisMax: Vec3;
+  printArea?: { min: Pick<Vec3, "x" | "y">; max: Pick<Vec3, "x" | "y"> };
   homePos: Vec3;
   minExtrudeTemp: number;
   maxVelocity: number;

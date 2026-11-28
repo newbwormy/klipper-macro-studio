@@ -3,6 +3,7 @@ import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { Grid, Line, OrbitControls } from "@react-three/drei";
 import * as THREE from "three";
 import { PrinterProfile, SimSegment, Vec3 } from "../sim/types";
+import { ToolheadModel } from "./ToolheadModel";
 
 const toThree = (p: Vec3): [number, number, number] => [p.x, p.z, -p.y];
 
@@ -54,8 +55,13 @@ function PrinterScene({
     [segments, currentTime]
   );
 
-  const bedW = Math.max(10, profile.axisMax.x - profile.axisMin.x);
-  const bedD = Math.max(10, profile.axisMax.y - profile.axisMin.y);
+  const plate = profile.printArea ?? { min: profile.axisMin, max: profile.axisMax };
+  const bedW = Math.max(10, plate.max.x - plate.min.x);
+  const bedD = Math.max(10, plate.max.y - plate.min.y);
+  const bedX = (plate.min.x + plate.max.x) / 2;
+  const bedY = (plate.min.y + plate.max.y) / 2;
+  const travelW = Math.max(10, profile.axisMax.x - profile.axisMin.x);
+  const travelD = Math.max(10, profile.axisMax.y - profile.axisMin.y);
   const bedH = Math.max(10, profile.axisMax.z - profile.axisMin.z);
   const centerX = (profile.axisMin.x + profile.axisMax.x) / 2;
   const centerY = (profile.axisMin.y + profile.axisMax.y) / 2;
@@ -64,11 +70,12 @@ function PrinterScene({
   const { camera, size } = useThree();
   useLayoutEffect(() => {
     const aspect = size.width / Math.max(1, size.height);
-    const distance = Math.hypot(bedW, bedD) * .64 / (Math.tan(Math.PI / 8) * Math.min(1, Math.max(.1, aspect)));
+    const distance = Math.hypot(Math.max(bedW, travelW), Math.max(bedD, travelD)) * .64 /
+      (Math.tan(Math.PI / 8) * Math.min(1, Math.max(.1, aspect)));
     const direction = new THREE.Vector3(.94, .83, 1.1).normalize().multiplyScalar(distance);
     camera.position.set(...target).add(direction);
     camera.lookAt(...target);
-  }, [camera, size.width, size.height, target, bedW, bedD]);
+  }, [camera, size.width, size.height, target, bedW, bedD, travelW, travelD]);
 
   const bedHeatRatio = Math.min(1, Math.max(0, (activeState.bedTemp - 30) / 80));
   const bedColor = useMemo(
@@ -83,13 +90,17 @@ function PrinterScene({
       <ambientLight intensity={0.65} />
       <directionalLight position={[180, 260, 180]} intensity={1.1} />
 
-      <mesh position={[centerX, -1.5, -centerY]}>
+      {profile.printArea && <mesh position={[centerX, -6, -centerY]}>
+        <boxGeometry args={[travelW, 3, travelD]} />
+        <meshStandardMaterial color="#151e2a" roughness={.82} />
+      </mesh>}
+      <mesh name="Print plate" position={[bedX, -1.5, -bedY]}>
         <boxGeometry args={[bedW, 3, bedD]} />
         <meshStandardMaterial color={bedColor} roughness={0.6} />
       </mesh>
 
       <Grid
-        position={[centerX, 0.05, -centerY]}
+        position={[bedX, 0.05, -bedY]}
         args={[bedW, bedD]}
         cellSize={10}
         sectionSize={50}
@@ -103,10 +114,35 @@ function PrinterScene({
         const w = Math.max(1, f.max.x - f.min.x);
         const d = Math.max(1, f.max.y - f.min.y);
         const h = Math.max(1, f.max.z - f.min.z);
+        const x = (f.min.x + f.max.x) / 2;
+        const z = -(f.min.y + f.max.y) / 2;
+        if (f.kind === "purge_bucket") {
+          const wall = Math.min(2.2, w / 3, d / 3);
+          return (
+            <group key={f.id} name={f.name} position={[x, f.min.z, z]}>
+              <mesh position-y={wall / 2}>
+                <boxGeometry args={[w, wall, d]} />
+                <meshStandardMaterial color="#3d3028" roughness={.85} />
+              </mesh>
+              {[-1, 1].map(side => (
+                <group key={side}>
+                  <mesh position={[0, h / 2, side * (d - wall) / 2]}>
+                    <boxGeometry args={[w, h, wall]} />
+                    <meshStandardMaterial color={f.color} roughness={.57} />
+                  </mesh>
+                  <mesh position={[side * (w - wall) / 2, h / 2, 0]}>
+                    <boxGeometry args={[wall, h, d - 2 * wall]} />
+                    <meshStandardMaterial color={f.color} roughness={.57} />
+                  </mesh>
+                </group>
+              ))}
+            </group>
+          );
+        }
         return (
           <mesh
             key={f.id}
-            position={[(f.min.x + f.max.x) / 2, (f.min.z + f.max.z) / 2, -(f.min.y + f.max.y) / 2]}
+            position={[x, (f.min.z + f.max.z) / 2, z]}
           >
             <boxGeometry args={[w, h, d]} />
             <meshStandardMaterial color={f.color} transparent opacity={0.55} />
@@ -131,18 +167,7 @@ function PrinterScene({
       })}
 
       <group position={toThree(activeState.pos)}>
-        <mesh position={[0, 5, 0]} rotation={[Math.PI, 0, 0]}>
-          <coneGeometry args={[3.5, 10, 16]} />
-          <meshStandardMaterial
-            color={nozzleHot ? "#fb923c" : "#cbd5e1"}
-            emissive={nozzleHot ? "#ea580c" : "#000000"}
-            emissiveIntensity={nozzleHot ? 0.6 : 0}
-          />
-        </mesh>
-        <mesh position={[0, 22, 0]}>
-          <boxGeometry args={[28, 24, 28]} />
-          <meshStandardMaterial color="#a5d782" metalness={0.2} roughness={0.45} />
-        </mesh>
+        <ToolheadModel hot={nozzleHot} />
       </group>
 
       <OrbitControls target={target} makeDefault />
