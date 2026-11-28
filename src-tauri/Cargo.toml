@@ -1,6 +1,6 @@
 [package]
 name = "klipper-macro-studio"
-version = "0.1.3"
+version = "0.1.4"
 description = "Interactive Klipper G-code macro builder and 3D simulator"
 authors = ["Klipper Macro Studio"]
 edition = "2021"
