@@ -5,14 +5,14 @@ Cross-platform desktop application (Windows, Linux, macOS) to visually build Kli
 ## Download
 
 <!-- download-links:start -->
-Latest release: [v0.1.3](https://github.com/newbwormy/klipper-macro-studio/releases/latest)
+Latest release: [v0.1.4](https://github.com/newbwormy/klipper-macro-studio/releases/latest)
 
 | Platform | Installer |
 | --- | --- |
-| Windows x64 | [MSI](https://github.com/newbwormy/klipper-macro-studio/releases/download/v0.1.3/Klipper.Macro.Studio_0.1.3_x64_en-US.msi) · [EXE](https://github.com/newbwormy/klipper-macro-studio/releases/download/v0.1.3/Klipper.Macro.Studio_0.1.3_x64-setup.exe) |
-| macOS Apple Silicon | [DMG](https://github.com/newbwormy/klipper-macro-studio/releases/download/v0.1.3/Klipper.Macro.Studio_0.1.3_aarch64.dmg) |
-| macOS Intel | [DMG](https://github.com/newbwormy/klipper-macro-studio/releases/download/v0.1.3/Klipper.Macro.Studio_0.1.3_x64.dmg) |
-| Linux x86-64 | [AppImage](https://github.com/newbwormy/klipper-macro-studio/releases/download/v0.1.3/Klipper.Macro.Studio_0.1.3_amd64.AppImage) · [DEB](https://github.com/newbwormy/klipper-macro-studio/releases/download/v0.1.3/Klipper.Macro.Studio_0.1.3_amd64.deb) · [RPM](https://github.com/newbwormy/klipper-macro-studio/releases/download/v0.1.3/Klipper.Macro.Studio-0.1.3-1.x86_64.rpm) |
+| Windows x64 | [MSI](https://github.com/newbwormy/klipper-macro-studio/releases/download/v0.1.4/Klipper.Macro.Studio_0.1.4_x64_en-US.msi) · [EXE](https://github.com/newbwormy/klipper-macro-studio/releases/download/v0.1.4/Klipper.Macro.Studio_0.1.4_x64-setup.exe) |
+| macOS Apple Silicon | [DMG](https://github.com/newbwormy/klipper-macro-studio/releases/download/v0.1.4/Klipper.Macro.Studio_0.1.4_aarch64.dmg) |
+| macOS Intel | [DMG](https://github.com/newbwormy/klipper-macro-studio/releases/download/v0.1.4/Klipper.Macro.Studio_0.1.4_x64.dmg) |
+| Linux x86-64 | [AppImage](https://github.com/newbwormy/klipper-macro-studio/releases/download/v0.1.4/Klipper.Macro.Studio_0.1.4_amd64.AppImage) · [DEB](https://github.com/newbwormy/klipper-macro-studio/releases/download/v0.1.4/Klipper.Macro.Studio_0.1.4_amd64.deb) · [RPM](https://github.com/newbwormy/klipper-macro-studio/releases/download/v0.1.4/Klipper.Macro.Studio-0.1.4-1.x86_64.rpm) |
 <!-- download-links:end -->
 
 ## Browser demo
