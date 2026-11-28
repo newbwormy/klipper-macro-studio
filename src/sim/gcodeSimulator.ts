@@ -1,5 +1,5 @@
 import { PrinterProfile, SimInitialState, SimIssue, SimSegment, SimulationResult, Vec3 } from "./types";
-import { PROBE_COMMAND_NAMES } from "../builder/probeCommands";
+import { SIMULATED_PROBE_COMMANDS } from "../builder/probeCommands";
 import { buildProbePath } from "./probePath";
 import { catalogCommandNames } from "../builder/commandCatalog";
 
@@ -360,7 +360,7 @@ export function simulateGcode(
       continue;
     }
 
-    if (PROBE_COMMAND_NAMES.has(cmd)) {
+    if (SIMULATED_PROBE_COMMANDS.has(cmd)) {
       const message = `${cmd}: approximate preview. Probe readings and calibration effects require printer hardware.`;
       if (cmd === "QUERY_PROBE" || cmd === "CARTOGRAPHER_QUERY") {
         const status = lastTouchZ === undefined

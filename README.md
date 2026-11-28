@@ -37,7 +37,7 @@ To preview locally, run `npm ci` and `npm run dev`, then open the URL printed by
 
 ## Probe commands
 
-Add a **Probe** block in the visual builder and choose a Klipper or Cartographer command. The block exports the command with any optional G-code parameters you enter. Klipper options include probe status, accuracy, calibration, bed meshing, Z tilt, and gantry leveling. Cartographer options cover status, scan, and touch commands for the current plugin with a `[cartographer]` section.
+Add a **Probe** block in the visual builder and choose a Klipper, Cartographer, or Eddy-NG command. The block exports the command with any optional G-code parameters you enter. Klipper options include probe status, accuracy, calibration, bed meshing, Z tilt, and gantry leveling. Cartographer options cover status, scan, and touch commands for the current plugin with a `[cartographer]` section.
 
 Probe motion appears in purple in the 3D viewport. The desktop preview uses configured mesh and leveling points when available. In the browser demo, a top-level Probe block plays with the other literal G-code in order. Cartographer touch homing uses a simulated flat-bed reading and marks Z homed after X and Y are homed so subsequent moves can play. Desktop Jinja2 sees an initial mock probe status when it renders a macro. A reading taken during playback becomes available to subsequent simulated probe queries, since Klipper renders a macro before executing its commands. See the [Klipper G-code reference](https://www.klipper3d.org/G-Codes.html) and [Cartographer macro reference](https://docs.cartographer3d.com/cartographer-probe/reference/macros-reference/).
 

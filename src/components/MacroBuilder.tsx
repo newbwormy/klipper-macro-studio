@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { MacroBlock, MacroDocument } from "../builder/blockTypes";
 import { getAvailableVariables, VariableChip } from "../builder/printerVariables";
 import { PROBE_COMMANDS, type ProbeCommand } from "../builder/probeCommands";
+import { commandDescriptions } from "../builder/commandDescriptions";
 import { CommandLibrary } from "./CommandLibrary";
 import type { ParsedMacroEntry } from "../config/klipperCfgParser";
 
@@ -346,7 +347,7 @@ function BlockList({
                   style={{ fontFamily: "monospace" }}
                 />
               </label>
-              <span style={{ color: "#94a3b8" }}>Preview motion is approximate. Probe readings and calibration require the configured printer.</span>
+              <span style={{ color: "#94a3b8" }}>{commandDescriptions[block.command]}</span>
             </div>
           )}
 
