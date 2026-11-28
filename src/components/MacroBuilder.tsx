@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { MacroBlock, MacroDocument } from "../builder/blockTypes";
 import { getAvailableVariables, VariableChip } from "../builder/printerVariables";
 import { PROBE_COMMANDS, type ProbeCommand } from "../builder/probeCommands";
-import { commandDescriptions } from "../builder/commandDescriptions";
+import { describeBlock } from "../builder/describeBlock";
 import { CommandLibrary } from "./CommandLibrary";
 import type { ParsedMacroEntry } from "../config/klipperCfgParser";
 
@@ -151,6 +151,7 @@ function BlockList({
                 onClick={() => removeBlock(idx)}>×</button>
             </div>
           </div>
+          <p className="block-summary">{describeBlock(block)}</p>
 
           {block.type === "move" && (
             <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "end" }}>
@@ -347,7 +348,6 @@ function BlockList({
                   style={{ fontFamily: "monospace" }}
                 />
               </label>
-              <span style={{ color: "#94a3b8" }}>{commandDescriptions[block.command]}</span>
             </div>
           )}
 
@@ -418,6 +418,11 @@ export function MacroBuilder({
           <h2>Macro sequence</h2>
           <span>{doc.blocks.length} {doc.blocks.length === 1 ? "block" : "blocks"}</span>
         </div>}
+        {!python && <label className="macro-description">
+          Description
+          <input value={doc.description} onChange={(e) => onChange({ ...doc, description: e.target.value })}
+            placeholder="Describe what this macro does" />
+        </label>}
         {python ? (
           <label style={{ display: "grid", gap: 8 }}>
             Kalico Python macro

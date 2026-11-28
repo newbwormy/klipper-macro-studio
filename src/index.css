@@ -188,6 +188,9 @@ code, pre { font-family: var(--mono); }
 .macro-block[data-block="probe"], .macro-block[data-block="if_block"] { --block-accent: #c1a9f5; }
 .block-heading { display: flex; justify-content: space-between; align-items: center; gap: 6px; margin-bottom: 7px; }
 .block-heading > strong { color: var(--block-accent); font-size: 12px; font-weight: 700; text-transform: capitalize; }
+.block-summary { margin: 0 0 9px; color: var(--muted); font-size: 12px; overflow-wrap: anywhere; }
+.macro-description { display: grid; gap: 4px; color: var(--muted); font-size: 12px; margin-bottom: 12px; }
+.macro-description input { width: 100%; color: var(--text); }
 .block-actions { display: flex; gap: 3px; }
 .block-actions button { min-height: 26px; min-width: 27px; padding: 0 4px; background: var(--inset); color: var(--muted); }
 .block-actions button:last-child:hover { color: #ffc5c5; border-color: #98616a; }
