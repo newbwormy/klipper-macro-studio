@@ -1,5 +1,5 @@
-import React, { useMemo } from "react";
-import { Canvas, useFrame } from "@react-three/fiber";
+import React, { useLayoutEffect, useMemo } from "react";
+import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { Grid, Line, OrbitControls } from "@react-three/drei";
 import * as THREE from "three";
 import { PrinterProfile, SimSegment, Vec3 } from "../sim/types";
@@ -59,10 +59,20 @@ function PrinterScene({
   const bedH = Math.max(10, profile.axisMax.z - profile.axisMin.z);
   const centerX = (profile.axisMin.x + profile.axisMax.x) / 2;
   const centerY = (profile.axisMin.y + profile.axisMax.y) / 2;
+  const target = useMemo<[number, number, number]>(() => [centerX, Math.min(bedH * .14, 42), -centerY],
+    [centerX, centerY, bedH]);
+  const { camera, size } = useThree();
+  useLayoutEffect(() => {
+    const aspect = size.width / Math.max(1, size.height);
+    const distance = Math.hypot(bedW, bedD) * .64 / (Math.tan(Math.PI / 8) * Math.min(1, Math.max(.1, aspect)));
+    const direction = new THREE.Vector3(.94, .83, 1.1).normalize().multiplyScalar(distance);
+    camera.position.set(...target).add(direction);
+    camera.lookAt(...target);
+  }, [camera, size.width, size.height, target, bedW, bedD]);
 
   const bedHeatRatio = Math.min(1, Math.max(0, (activeState.bedTemp - 30) / 80));
   const bedColor = useMemo(
-    () => new THREE.Color("#1e293b").lerp(new THREE.Color("#9a3412"), bedHeatRatio),
+    () => new THREE.Color("#202d3a").lerp(new THREE.Color("#6e4940"), bedHeatRatio),
     [bedHeatRatio]
   );
 
@@ -83,15 +93,11 @@ function PrinterScene({
         args={[bedW, bedD]}
         cellSize={10}
         sectionSize={50}
-        cellColor="#334155"
-        sectionColor="#64748b"
+        cellColor="#425263"
+        sectionColor="#768a9c"
         fadeDistance={800}
       />
 
-      <mesh position={[centerX, bedH / 2, -centerY]}>
-        <boxGeometry args={[bedW, bedH, bedD]} />
-        <meshBasicMaterial color="#475569" wireframe transparent opacity={0.25} />
-      </mesh>
 
       {profile.fixtures.map((f) => {
         const w = Math.max(1, f.max.x - f.min.x);
@@ -135,18 +141,18 @@ function PrinterScene({
         </mesh>
         <mesh position={[0, 22, 0]}>
           <boxGeometry args={[28, 24, 28]} />
-          <meshStandardMaterial color="#3b82f6" metalness={0.2} roughness={0.4} />
+          <meshStandardMaterial color="#a5d782" metalness={0.2} roughness={0.45} />
         </mesh>
       </group>
 
-      <OrbitControls target={[centerX, 40, -centerY]} makeDefault />
+      <OrbitControls target={target} makeDefault />
     </>
   );
 }
 
 export function PrinterViewport(props: SceneProps) {
   return (
-    <div style={{ width: "100%", height: "100%", background: "#0f172a" }}>
+    <div style={{ width: "100%", height: "100%", background: "radial-gradient(ellipse at 50% 58%, #202f3e, #101823 75%)" }}>
       <Canvas camera={{ position: [280, 230, 280], fov: 45, near: 1, far: 3000 }}>
         <PrinterScene {...props} />
       </Canvas>

@@ -129,20 +129,24 @@ function BlockList({
   const removeBlock = (idx: number) => onChange(blocks.filter((_, i) => i !== idx));
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+    <div className="block-list">
       {blocks.map((block, idx) => (
         <div
           key={block.id}
-          style={{ padding: 10, background: "#1e293b", border: "1px solid #334155", borderRadius: 8 }}
+          className="macro-block"
+          data-block={block.type}
         >
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-            <strong style={{ fontSize: 12, color: "#38bdf8", textTransform: "uppercase" }}>
-              {block.type.replace("_", " ")}
+          <div className="block-heading">
+            <strong>
+              {block.type.replace(/_/g, " ")}
             </strong>
-            <div style={{ display: "flex", gap: 4 }}>
-              <button type="button" onClick={() => moveBlock(idx, -1)}>↑</button>
-              <button type="button" onClick={() => moveBlock(idx, 1)}>↓</button>
-              <button type="button" onClick={() => removeBlock(idx)} style={{ color: "#f87171" }}>✕</button>
+            <div className="block-actions">
+              <button type="button" aria-label="Move block up" title="Move block up"
+                disabled={idx === 0} onClick={() => moveBlock(idx, -1)}>↑</button>
+              <button type="button" aria-label="Move block down" title="Move block down"
+                disabled={idx === blocks.length - 1} onClick={() => moveBlock(idx, 1)}>↓</button>
+              <button type="button" aria-label="Remove block" title="Remove block"
+                onClick={() => removeBlock(idx)}>×</button>
             </div>
           </div>
 
@@ -374,19 +378,9 @@ export function MacroBuilder({
     onChange({ ...doc, blocks: [...doc.blocks, BLOCK_TEMPLATES[key]()] });
 
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "155px 1fr", height: "100%", overflow: "hidden" }}>
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          gap: 6,
-          padding: 10,
-          background: "#0f172a",
-          borderRight: "1px solid #1e293b",
-          overflowY: "auto",
-        }}
-      >
-        <label style={{ display: "grid", gap: 4, fontSize: 12 }}>
+    <div className="builder-layout">
+      <aside className="block-palette" aria-label="Macro tools">
+        <label className="language-control">
           Macro language
           <select value={doc.language ?? "jinja"}
             onChange={(e) => onChange({ ...doc, language: e.target.value === "python" ? "python" : "jinja" })}>
@@ -402,20 +396,26 @@ export function MacroBuilder({
             onChange({ ...doc, blocks: [...doc.blocks, { id: makeId(), type: "raw_gcode", code }] });
           }
         }} />
-        {!python && <div style={{ fontSize: 11, fontWeight: 700, color: "#94a3b8" }}>ADD BLOCK</div>}
-        {!python && Object.keys(BLOCK_TEMPLATES).map((key) => (
+        {!python && <div className="palette-blocks">
+          <h3>Add block</h3>
+          {Object.keys(BLOCK_TEMPLATES).map((key) => (
           <button
             key={key}
             type="button"
             onClick={() => addBlock(key)}
-            style={{ textAlign: "left" }}
+            className="palette-button"
           >
-            + {key.replace("_", " ")}
+            <span aria-hidden="true">+</span><span>{key.replace(/_/g, " ")}</span>
           </button>
-        ))}
-      </div>
+          ))}
+        </div>}
+      </aside>
 
-      <div style={{ padding: 12, overflowY: "auto" }}>
+      <div className="block-workspace">
+        {!python && <div className="block-workspace-heading">
+          <h2>Macro sequence</h2>
+          <span>{doc.blocks.length} {doc.blocks.length === 1 ? "block" : "blocks"}</span>
+        </div>}
         {python ? (
           <label style={{ display: "grid", gap: 8 }}>
             Kalico Python macro

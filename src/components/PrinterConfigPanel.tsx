@@ -79,9 +79,9 @@ export function PrinterConfigPanel({
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 14, padding: 12, fontSize: 13, overflowY: "auto", height: "100%" }}>
+    <div className="printer-settings">
       {/* Moonraker Direct Sync */}
-      <section style={{ padding: 10, border: "1px solid #334155", borderRadius: 8, background: "#0f172a" }}>
+      <section>
         <strong>Sync Live from Moonraker</strong>
         <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
           <input
@@ -96,7 +96,7 @@ export function PrinterConfigPanel({
       </section>
 
       {/* Config File Dropzone */}
-      <section style={{ padding: 10, border: "1px dashed #475569", borderRadius: 8, background: "#0f172a" }}>
+      <section>
         <strong>Import Klipper Config (.cfg)</strong>
         <p style={{ margin: "4px 0 8px", color: "#94a3b8", fontSize: 11 }}>
           Select <code>printer.cfg</code> (and optionally <code>macros.cfg</code>).

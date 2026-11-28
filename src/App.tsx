@@ -170,49 +170,34 @@ export default function App() {
   );
 
   return (
-    <div style={{ display: "grid", gridTemplateRows: "46px 1fr", height: "100vh", width: "100vw" }}>
-      {/* Top Bar */}
-      <header
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          padding: "0 14px",
-          background: "#0f172a",
-          borderBottom: "1px solid #1e293b",
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <strong style={{ color: "#38bdf8" }}>Klipper Macro Studio</strong>
+    <div className="studio">
+      <header className="app-header">
+        <div className="wordmark">
+          <span className="studio-mark" aria-hidden="true"><span /></span>
+          <h1>Klipper <span>Macro Studio</span></h1>
+        </div>
+        <label className="macro-name">
+          <span>Macro</span>
           <input
             value={macroDoc.name}
             onChange={(e) => setMacroDoc({ ...macroDoc, name: e.target.value.toUpperCase().replace(/\s+/g, "_") })}
-            style={{ width: 200, fontFamily: "monospace" }}
           />
-          {!browserDemo && <label style={{ fontSize: 12, color: "#94a3b8" }}>
+        </label>
+        {!browserDemo && <label className="kalico-toggle">
             <input
               type="checkbox"
               checked={kalicoMode}
               onChange={(e) => setKalicoMode(e.target.checked)}
             />{" "}
             Kalico Jinja2 Extensions
-          </label>}
-        </div>
+        </label>}
         <ExportToolbar doc={macroDoc} />
       </header>
 
-      {/* Main 3-Pane Workspace */}
-      <div style={{ display: "grid", gridTemplateColumns: "290px 1fr 480px", overflow: "hidden" }}>
-        {/* Left: Printer Config & State */}
-        <aside style={{ borderRight: "1px solid #1e293b", background: "#020617", overflow: "hidden" }}>
-          {browserDemo ? (
-            <div style={{ padding: 12, fontSize: 13 }}>
-              <strong>Browser demo</strong>
-              <p>{DEFAULT_PROFILE.name} · Prime and wipe</p>
-              <p>Press Play for the bundled sample, or edit the macro to preview its literal G-code.</p>
-              <p>Use the desktop app to evaluate Jinja2 or connect to Moonraker.</p>
-            </div>
-          ) : <PrinterConfigPanel
+      <div className={browserDemo ? "workspace workspace--browser" : "workspace workspace--desktop"}>
+        {!browserDemo && <aside className="panel printer-panel" aria-label="Printer settings">
+          <div className="panel-heading"><h2>Printer settings</h2></div>
+          <PrinterConfigPanel
             profile={profile}
             initialState={initialState}
             testParams={testParams}
@@ -224,43 +209,42 @@ export default function App() {
               setImportedMacros(parsed.macros);
             }}
             onMoonrakerSynced={(settings) => setConfigSettings(settings)}
-          />}
-        </aside>
+          />
+        </aside>}
 
-        {/* Center: Visual Builder / Live Code */}
-        <main style={{ display: "grid", gridTemplateRows: "36px 1fr", borderRight: "1px solid #1e293b", overflow: "hidden" }}>
-          <div style={{ display: "flex", gap: 6, padding: "4px 10px", background: "#0f172a", borderBottom: "1px solid #1e293b" }}>
+        <main className="panel editor-panel">
+          <div className="editor-tabs" role="group" aria-label="Editor view">
             <button
               type="button"
               onClick={() => setCenterTab("builder")}
-              style={{ background: centerTab === "builder" ? "#2563eb" : "#1e293b" }}
+              aria-pressed={centerTab === "builder"}
             >
               Visual Builder
             </button>
             <button
               type="button"
               onClick={() => setCenterTab("code")}
-              style={{ background: centerTab === "code" ? "#2563eb" : "#1e293b" }}
+              aria-pressed={centerTab === "code"}
             >
-              Generated Macro &amp; Rendered G-code
+              Generated code
             </button>
           </div>
 
           {centerTab === "builder" ? (
             <MacroBuilder doc={macroDoc} onChange={setMacroDoc} importedCommands={importedMacros.map(({ name }) => name)} />
           ) : (
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, padding: 12, overflow: "hidden" }}>
-              <div style={{ display: "flex", flexDirection: "column", overflow: "hidden" }}>
-                <strong style={{ fontSize: 12, marginBottom: 6 }}>Compiled [gcode_macro]</strong>
-                <pre style={{ flex: 1, margin: 0, padding: 10, background: "#0f172a", overflow: "auto", fontSize: 12 }}>
+            <div className="code-grid">
+              <div className="code-panel">
+                <h3>Klipper config</h3>
+                <pre>
                   {compileKlipperConfig(macroDoc)}
                 </pre>
               </div>
-              <div style={{ display: "flex", flexDirection: "column", overflow: "hidden" }}>
-                <strong style={{ fontSize: 12, marginBottom: 6 }}>
+              <div className="code-panel">
+                <h3>
                   {browserDemo ? (browserGcode === sampleGcode ? "Bundled Sample G-code" : "Preview G-code") : "Evaluated G-code (Real Jinja2 Output)"}
-                </strong>
-                <pre style={{ flex: 1, margin: 0, padding: 10, background: "#0f172a", overflow: "auto", fontSize: 12, color: "#93c5fd" }}>
+                </h3>
+                <pre>
                   {macroDoc.language === "python" ? "Kalico runs Python macros on the printer. This editor exports the source."
                     : evalError ? `ERROR: ${evalError}` : renderedGcode}
                 </pre>
@@ -269,9 +253,12 @@ export default function App() {
           )}
         </main>
 
-        {/* Right: 3D Simulator + Playback Controls */}
-        <section style={{ display: "grid", gridTemplateRows: "1fr auto auto", overflow: "hidden" }}>
-          <div style={{ position: "relative", overflow: "hidden" }}>
+        <section className="panel preview-panel" aria-label="3D preview">
+          <div className="panel-heading">
+            <h2>3D preview</h2>
+            <span className="profile-label">{profile.name}</span>
+          </div>
+          <div className="preview-stage">
             <PrinterViewport
               profile={profile}
               segments={simResult.segments}
@@ -281,35 +268,39 @@ export default function App() {
               onTimeAdvance={handleTimeAdvance}
             />
             {activeSeg && (
-              <div
-                style={{
-                  position: "absolute",
-                  top: 10,
-                  left: 10,
-                  padding: "6px 10px",
-                  background: "rgba(15,23,42,0.85)",
-                  border: "1px solid #334155",
-                  borderRadius: 6,
-                  fontSize: 11,
-                  fontFamily: "monospace",
-                }}
-              >
-                <div>Line {activeSeg.lineNumber}: {activeSeg.gcode}</div>
-                {activeSeg.message && <div>{activeSeg.message}</div>}
-                <div style={{ color: "#94a3b8", marginTop: 2 }}>
-                  Hotend: {activeSeg.toolTemp}°C | Bed: {activeSeg.bedTemp}°C
-                </div>
+              <div className="preview-readout">
+                <strong>Line {activeSeg.lineNumber}: {activeSeg.gcode}</strong>
+                {activeSeg.message && <span>{activeSeg.message}</span>}
               </div>
             )}
+            {activeSeg && <div className="preview-temps">
+              <span>Hotend <strong>{activeSeg.toolTemp}°C</strong></span>
+              <span>Bed <strong>{activeSeg.bedTemp}°C</strong></span>
+            </div>}
           </div>
 
-          {/* Playback Controls */}
-          <div style={{ padding: 10, background: "#0f172a", borderTop: "1px solid #1e293b", display: "flex", flexDirection: "column", gap: 8 }}>
-            {browserDemo && macroDoc.language !== "python" && <strong style={{ fontSize: 12 }}>
-              {browserGcode === sampleGcode ? "Sample playback" : "Literal G-code playback"}
-            </strong>}
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <div className="transport">
+            <div className="transport-status">
+              <span>{macroDoc.language === "python" ? "Playback unavailable for Python"
+                : browserDemo ? (browserGcode === sampleGcode ? "Sample playback" : "Literal G-code playback")
+                  : "Macro playback"}</span>
+              <span className="timecode">{currentTime.toFixed(1)}s <span>/</span> {simResult.totalDuration.toFixed(1)}s</span>
+            </div>
+            <input
+              aria-label="Playback timeline"
+              type="range"
+              min={0}
+              max={Math.max(simResult.totalDuration, 0.01)}
+              step={0.02}
+              value={currentTime}
+              onChange={(e) => {
+                setIsPlaying(false);
+                setCurrentTime(Number(e.target.value));
+              }}
+            />
+            <div className="transport-buttons">
               <button
+                className="primary-button play-button"
                 type="button"
                 disabled={simResult.totalDuration <= 0}
                 onClick={() => {
@@ -317,7 +308,7 @@ export default function App() {
                   setIsPlaying((p) => !p);
                 }}
               >
-                {isPlaying ? "Pause" : "Play"}
+                <span aria-hidden="true">{isPlaying ? "Ⅱ" : "▶"}</span> {isPlaying ? "Pause" : "Play"}
               </button>
               <button
                 type="button"
@@ -328,36 +319,21 @@ export default function App() {
               >
                 Reset
               </button>
-              <select value={speed} onChange={(e) => setSpeed(Number(e.target.value))}>
+              <select aria-label="Playback speed" value={speed} onChange={(e) => setSpeed(Number(e.target.value))}>
                 <option value={0.5}>0.5x</option>
                 <option value={1}>1x</option>
                 <option value={2}>2x</option>
                 <option value={5}>5x</option>
               </select>
-              <span style={{ fontSize: 11, color: "#94a3b8", marginLeft: "auto" }}>
-                {currentTime.toFixed(1)}s / {simResult.totalDuration.toFixed(1)}s
-              </span>
             </div>
-            <input
-              type="range"
-              min={0}
-              max={Math.max(simResult.totalDuration, 0.01)}
-              step={0.02}
-              value={currentTime}
-              onChange={(e) => {
-                setIsPlaying(false);
-                setCurrentTime(Number(e.target.value));
-              }}
-              style={{ width: "100%" }}
-            />
           </div>
 
           {/* Diagnostics / Errors */}
           {(evalError || simResult.issues.length > 0) && (
-            <div style={{ maxHeight: 130, overflowY: "auto", padding: 8, background: "#450a0a", borderTop: "1px solid #991b1b", fontSize: 12 }}>
-              {evalError && <div><strong>Jinja2 Error:</strong> {evalError}</div>}
+            <div className="diagnostics" aria-label="Preview diagnostics">
+              {evalError && <div className="diagnostic diagnostic--error"><strong>Jinja2 error</strong> {evalError}</div>}
               {simResult.issues.map((iss, i) => (
-                <div key={i}>
+                <div key={i} className={`diagnostic diagnostic--${iss.severity}`}>
                   <strong>Line {iss.lineNumber}:</strong> {iss.message} <code>({iss.gcode})</code>
                 </div>
               ))}

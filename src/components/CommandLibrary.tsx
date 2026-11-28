@@ -22,12 +22,13 @@ export function CommandLibrary({ python, imported, onInsert }: {
 
   return (
     <>
-      <button type="button" onClick={() => dialog.current?.showModal()}>Command library</button>
-      <dialog ref={dialog} aria-label="Command library" style={{
-        width: "min(640px, 90vw)", color: "#e2e8f0", background: "#0f172a",
-        border: "1px solid #475569", borderRadius: 8, padding: 16,
-      }}>
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+      <button type="button" className="library-trigger" onClick={() => dialog.current?.showModal()}>Command library</button>
+      <dialog ref={dialog} aria-labelledby="library-title" className="command-dialog">
+        <div className="dialog-heading">
+          <h2 id="library-title">Command library</h2>
+          <button type="button" onClick={() => dialog.current?.close()} aria-label="Close command library">×</button>
+        </div>
+        <div className="command-filters">
           <label>
             Source{" "}
             <select value={selected} onChange={(e) => setSource(e.target.value)}>
@@ -37,17 +38,16 @@ export function CommandLibrary({ python, imported, onInsert }: {
             </select>
           </label>
           <input aria-label="Search commands" value={query} onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search name or module" style={{ flex: 1 }} />
-          <button type="button" onClick={() => dialog.current?.close()}>Close</button>
+            placeholder="Search name or module" />
         </div>
         {catalog && <p style={{ fontSize: 12 }}>
           <a href={catalog.reference} target="_blank" rel="noreferrer" style={{ color: "#7dd3fc" }}>
             {selected} command reference
           </a>
         </p>}
-        <div style={{ display: "grid", gap: 4, maxHeight: "50vh", overflowY: "auto" }}>
+        <div className="command-results">
           {matches.map(({ name, code, group }) => (
-            <button key={`${group}:${name}`} type="button" style={{ textAlign: "left" }} onClick={() => {
+            <button key={`${group}:${name}`} type="button" onClick={() => {
               onInsert(code);
               dialog.current?.close();
             }}>

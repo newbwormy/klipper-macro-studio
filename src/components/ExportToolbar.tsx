@@ -41,10 +41,10 @@ export function ExportToolbar({ doc }: { doc: MacroDocument }) {
   };
 
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+    <div className="export-controls">
       <button type="button" onClick={handleCopy}>Copy Macro</button>
-      <button type="button" onClick={handleSaveCfg}>Export .cfg</button>
-      {status && <span style={{ fontSize: 12, color: "#4ade80" }}>{status}</span>}
+      <button type="button" className="primary-button" onClick={handleSaveCfg}>Export .cfg</button>
+      <span className="export-status" role="status">{status}</span>
     </div>
   );
 }
