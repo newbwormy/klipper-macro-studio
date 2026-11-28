@@ -6,6 +6,7 @@ export interface EvalResult {
   gcode?: string;
   logs?: Array<{ level: string; message?: string }>;
   error?: string;
+  missing_param?: string;
   warnings?: string[];
 }
 

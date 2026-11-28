@@ -10,6 +10,27 @@ class KlipperMacroError(Exception):
     pass
 
 
+class MissingPreviewArgument(jinja2.UndefinedError):
+    pass
+
+
+class PreviewArguments(dict):
+    pass
+
+
+class PreviewUndefined(jinja2.Undefined):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if isinstance(self._undefined_obj, PreviewArguments):
+            self._undefined_exception = MissingPreviewArgument
+            self._undefined_hint = str(self._undefined_name)
+
+    def __str__(self):
+        if self._undefined_exception is MissingPreviewArgument:
+            self._fail_with_undefined_error()
+        return super().__str__()
+
+
 def build_env(enable_extensions: bool = False) -> jinja2.Environment:
     extensions = ["jinja2.ext.do", "jinja2.ext.loopcontrols"] if enable_extensions else []
     return SandboxedEnvironment(
@@ -18,6 +39,7 @@ def build_env(enable_extensions: bool = False) -> jinja2.Environment:
         variable_start_string="{",
         variable_end_string="}",
         extensions=extensions,
+        undefined=PreviewUndefined,
     )
 
 
@@ -87,9 +109,13 @@ def evaluate_macro(payload: dict) -> dict:
             rendered = env.from_string(gcode).render({
                 **variables,
                 **context,
-                "params": {str(key).upper(): str(value) for key, value in params.items()},
+                "params": PreviewArguments({str(key).upper(): str(value) for key, value in params.items()}),
                 "rawparams": rawparams,
             })
+        except MissingPreviewArgument as exc:
+            if stack:
+                raise KlipperMacroError(f"{label} needs the {exc} argument in its macro call.") from exc
+            raise
         except (jinja2.TemplateError, KlipperMacroError) as exc:
             raise KlipperMacroError(f"{label}: {exc}") from exc
         output = []
@@ -110,7 +136,14 @@ def evaluate_macro(payload: dict) -> dict:
                 output.append(line)
         return output
 
-    rendered = "\n".join(render(macro_gcode, macro_name, raw_params, rawparams_str, ()))
+    try:
+        rendered = "\n".join(render(macro_gcode, macro_name, raw_params, rawparams_str, ()))
+    except MissingPreviewArgument as exc:
+        return {
+            "ok": False,
+            "error": f"{macro_name or 'This macro'} needs a preview value for {exc}.",
+            "missing_param": str(exc),
+        }
     result = {"ok": True, "gcode": rendered, "logs": logs}
     if warnings:
         result["warnings"] = warnings

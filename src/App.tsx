@@ -93,6 +93,7 @@ export default function App() {
   const drafts = useRef(new Map<string, MacroDocument>());
   const [renderedGcode, setRenderedGcode] = useState("");
   const [evalError, setEvalError] = useState<string | null>(null);
+  const [missingParam, setMissingParam] = useState<string | null>(null);
   const [simResult, setSimResult] = useState(EMPTY_SIMULATION);
   const [previewPending, setPreviewPending] = useState(!browserDemo);
   const [previewWarnings, setPreviewWarnings] = useState<string[]>([]);
@@ -137,6 +138,7 @@ export default function App() {
     setCenterTab("builder");
     setPreviewPending(true);
     setEvalError(null);
+    setMissingParam(null);
     setPreviewWarnings([]);
     setRenderedGcode("");
     setSimResult(EMPTY_SIMULATION);
@@ -189,6 +191,7 @@ export default function App() {
     if (browserDemo) return;
     setRenderedGcode("");
     setEvalError(null);
+    setMissingParam(null);
     setPreviewWarnings([]);
     setSimResult(EMPTY_SIMULATION);
     setIsPlaying(false);
@@ -211,6 +214,8 @@ export default function App() {
           setSimResult(sim);
         } else {
           setEvalError(res.error ?? "Jinja2 evaluation failed");
+          const key = res.missing_param?.toUpperCase();
+          if (key && !Object.prototype.hasOwnProperty.call(testParams, key)) setMissingParam(key);
         }
       } catch (err) {
         if (!cancelled) setEvalError(String(err));
@@ -368,7 +373,8 @@ export default function App() {
             )}
             {!activeSeg && macroDoc.language !== "python" && <div className="preview-readout" role="status">
               {previewPending ? "Rendering macro…"
-                : evalError ? "Preview couldn’t render. Check the error below and fill in any required Test Parameters."
+                : missingParam ? `Enter ${missingParam} below to preview this macro.`
+                : evalError ? "Preview couldn’t render. Check the error below."
                   : "No previewable G-code. Check that the macro produces moves and that any macros it calls were imported."}
             </div>}
             {activeSeg && <div className="preview-temps">
@@ -429,7 +435,19 @@ export default function App() {
           {/* Diagnostics / Errors */}
           {(evalError || previewWarnings.length > 0 || simResult.issues.length > 0) && (
             <div className="diagnostics" aria-label="Preview diagnostics">
-              {evalError && <div className="diagnostic diagnostic--error"><strong>Jinja2 error</strong> {evalError}</div>}
+              {missingParam ? (
+                <form className="preview-argument-form" key={missingParam} onSubmit={event => {
+                  event.preventDefault();
+                  const value = new FormData(event.currentTarget).get("argument");
+                  if (typeof value === "string" && value.trim()) {
+                    setTestParams(params => ({ ...params, [missingParam]: value.trim() }));
+                  }
+                }}>
+                  <label htmlFor="missing-preview-argument">Preview value for <code>{missingParam}</code></label>
+                  <input id="missing-preview-argument" name="argument" required />
+                  <button type="submit">Update preview</button>
+                </form>
+              ) : evalError && <div className="diagnostic diagnostic--error"><strong>Jinja2 error</strong> {evalError}</div>}
               {previewWarnings.map((warning, i) => <div key={i} className="diagnostic">{warning}</div>)}
               {simResult.issues.map((iss, i) => (
                 <div key={i} className={`diagnostic diagnostic--${iss.severity}`}>

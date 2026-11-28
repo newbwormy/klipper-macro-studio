@@ -244,6 +244,9 @@ code, pre { font-family: var(--mono); }
 .diagnostics { max-height: 133px; overflow: auto; padding: 5px 14px 8px; border-top: 1px solid var(--line); font-size: 12px; }
 .diagnostic { padding: 5px 0; color: #f6d39b; overflow-wrap: anywhere; }
 .diagnostic--error { color: #ffb0b7; }
+.preview-argument-form { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 5px 0; }
+.preview-argument-form label { flex-basis: 100%; color: var(--muted); }
+.preview-argument-form input { flex: 1 1 90px; }
 
 .command-dialog {
   width: min(640px, calc(100% - 28px));
